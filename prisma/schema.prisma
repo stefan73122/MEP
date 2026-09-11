@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Fila única con la configuración del negocio y el acceso del dueño.
+// Sistema de un solo usuario: no hay tabla de usuarios ni roles.
+model Configuracion {
+  id            Int    @id @default(autoincrement())
+  nombreNegocio String
+  moneda        String @default("BOB")
+  simboloMoneda String @default("Bs")
+
+  // Acceso con PIN: null = sin PIN, se entra directo al sistema.
+  pinHash               String?
+  diasAlertaVencimiento Int     @default(30)
+
+  updatedAt DateTime @updatedAt
+}
+
+model Producto {
+  id           Int      @id @default(autoincrement())
+  sku          String   @unique
+  nombre       String
+  categoria    String?
+  unidadMedida String   @default("unidad") // "unidad", "kg", "litro", "caja", etc.
+
+  // Cuántas "unidades mínimas" (enteras) equivalen a 1 unidadMedida.
+  // Ej: kg -> 1000 (se maneja en gramos), litro -> 1000 (mililitros), unidad -> 1.
+  // Permite vender fracciones (0.5 kg) sin usar números decimales.
+  factorConversion Int @default(1)
+
+  precioCompra Int // centavos, por unidadMedida
+  precioVenta  Int // centavos, por unidadMedida
+
+  // Si es perecedero, el stock se maneja en lotes con fecha de vencimiento
+  // (ver modelo Lote) y stockActual es la suma de sus lotes vigentes.
+  perecedero  Boolean @default(false)
+  stockActual Int     @default(0) // en unidades mínimas
+  stockMinimo Int     @default(0) // en unidades mínimas
+
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lotes       Lote[]
+  movimientos MovimientoInventario[]
+  itemsVenta  VentaItem[]
+
+  @@index([nombre])
+}
+
+// Solo existen lotes para productos perecederos. Al vender se descuenta del
+// lote que vence primero (FEFO, ver src/lib/lotes.ts); un lote vencido no se
+// puede vender.
+model Lote {
+  id               Int      @id @default(autoincrement())
+  productoId       Int
+  producto         Producto @relation(fields: [productoId], references: [id])
+  cantidad         Int // unidades mínimas restantes en este lote
+  fechaVencimiento DateTime
+  createdAt        DateTime @default(now())
+
+  movimientos MovimientoInventario[]
+
+  @@index([productoId, fechaVencimiento])
+}
+
+// tipo: "ENTRADA" | "SALIDA" | "AJUSTE"
+model MovimientoInventario {
+  id         Int      @id @default(autoincrement())
+  productoId Int
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  // Solo se completa para productos perecederos: a qué lote afectó.
+  loteId Int?
+  lote   Lote? @relation(fields: [loteId], references: [id])
+
+  tipo           String
+  cantidad       Int // en unidades mínimas del producto, siempre positivo
+  stockAnterior  Int // stock total del producto (no del lote)
+  stockPosterior Int
+  motivo         String
+
+  ventaId Int?
+  venta   Venta? @relation(fields: [ventaId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([productoId])
+  @@index([createdAt])
+}
+
+model Cliente {
+  id            Int    @id @default(autoincrement())
+  nombre        String
+  telefono      String?
+  limiteCredito Int    @default(0) // centavos
+
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ventas Venta[]
+  pagos  Pago[]
+
+  @@index([nombre])
+}
+
+// formaPago: "EFECTIVO" | "TRANSFERENCIA_QR" | "CREDITO"
+// estado: "COMPLETADA" | "ANULADA"
+model Venta {
+  id        Int      @id @default(autoincrement())
+  clienteId Int?
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
+
+  fecha DateTime @default(now())
+
+  subtotal  Int
+  descuento Int @default(0)
+  total     Int
+
+  formaPago       String
+  estado          String  @default("COMPLETADA")
+  motivoAnulacion String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items                 VentaItem[]
+  movimientosInventario MovimientoInventario[]
+  pagosAplicados        PagoVenta[]
+
+  @@index([fecha])
+  @@index([clienteId])
+  @@index([estado])
+}
+
+model VentaItem {
+  id      Int   @id @default(autoincrement())
+  ventaId Int
+  venta   Venta @relation(fields: [ventaId], references: [id])
+
+  productoId Int
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  cantidad       Int // en unidades mínimas del producto
+  precioUnitario Int // centavos, precio por unidadMedida vigente al momento de la venta
+  descuento      Int @default(0) // centavos
+  subtotal       Int // centavos
+
+  @@index([ventaId])
+  @@index([productoId])
+}
+
+model Pago {
+  id        Int     @id @default(autoincrement())
+  clienteId Int
+  cliente   Cliente @relation(fields: [clienteId], references: [id])
+
+  monto       Int // centavos
+  fecha       DateTime @default(now())
+  observacion String?
+
+  createdAt DateTime @default(now())
+
+  aplicaciones PagoVenta[]
+
+  @@index([clienteId])
+}
+
+// Permite aplicar un pago a una o varias ventas a crédito.
+model PagoVenta {
+  id     Int  @id @default(autoincrement())
+  pagoId Int
+  pago   Pago @relation(fields: [pagoId], references: [id])
+
+  ventaId Int
+  venta   Venta @relation(fields: [ventaId], references: [id])
+
+  montoAplicado Int // centavos
+
+  @@index([pagoId])
+  @@index([ventaId])
+}
+
+// Gasto simple del día (opcional): solo para estimar la ganancia real.
+// Sin categoría ni medio de pago, sin relación con ninguna caja.
+model Gasto {
+  id          Int      @id @default(autoincrement())
+  monto       Int // centavos
+  descripcion String
+  fecha       DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([fecha])
+}
+
+// Bitácora simple de qué pasó y cuándo (sin usuario: el sistema es de una
+// sola persona). entidad: nombre del modelo afectado ("Venta", "Producto", ...)
+// accion: "CREAR" | "ACTUALIZAR" | "ANULAR" | "AJUSTAR" | "PAGAR"
+model AuditLog {
+  id        Int    @id @default(autoincrement())
+  entidad   String
+  entidadId Int
+  accion    String
+  detalle   String? // JSON con el detalle del cambio
+  createdAt DateTime @default(now())
+
+  @@index([entidad, entidadId])
+}

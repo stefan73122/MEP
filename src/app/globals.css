@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-500: #2563eb;
+  --color-primary-600: #1d4ed8;
+  --color-primary-700: #1e40af;
+  --color-danger-500: #dc2626;
+  --color-danger-600: #b91c1c;
+  --color-success-500: #16a34a;
+  --color-warning-500: #d97706;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* Evita el zoom automático de iOS al enfocar inputs en celulares */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
