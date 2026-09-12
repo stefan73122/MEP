@@ -16,11 +16,7 @@ export type EstadoVenta = (typeof ESTADOS_VENTA)[number];
 export const ACCIONES_AUDITORIA = ["CREAR", "ACTUALIZAR", "ANULAR", "AJUSTAR", "PAGAR"] as const;
 export type AccionAuditoria = (typeof ACCIONES_AUDITORIA)[number];
 
-export const NOMBRE_COOKIE_SESION = "sesion";
-export const DURACION_SESION_MS = 1000 * 60 * 60 * 24 * 30; // 30 días: es un solo dueño, no hace falta re-loguear seguido
-
-export const LARGO_PIN_MINIMO = 4;
-export const LARGO_PIN_MAXIMO = 6;
+export const LARGO_PIN = 4;
 
 // "Tipo de venta" es un concepto solo de la interfaz para simplificar la carga
 // de productos: define unidadMedida + factorConversion al crear el producto.

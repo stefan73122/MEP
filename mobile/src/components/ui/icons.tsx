@@ -223,6 +223,48 @@ export function IconAjustes({ className = "" }: IconProps) {
   );
 }
 
+export function IconHuella({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="28"
+      height="28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`${base} ${className}`}
+    >
+      <path d="M12 3.5c-4.7 0-8.5 3.8-8.5 8.5 0 1.6.1 2.9.5 4.2" />
+      <path d="M12 3.5c4.7 0 8.5 3.8 8.5 8.5 0 .9-.05 1.7-.15 2.5" />
+      <path d="M7.5 20.2c-.9-1.6-1.5-3.6-1.5-6.2a6 6 0 0 1 12 0c0 .6 0 1.1-.05 1.6" />
+      <path d="M9.8 21c-.8-1.4-1.3-3.2-1.3-5.5v-1a3.5 3.5 0 0 1 7 0v1c0 .8-.05 1.5-.15 2.2" />
+      <path d="M13.5 20.5c1.4-1 2-2.7 2-5v-1" />
+    </svg>
+  );
+}
+
+export function IconBackspace({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="22"
+      height="22"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`${base} ${className}`}
+    >
+      <path d="M9 4h10a1.5 1.5 0 0 1 1.5 1.5v13A1.5 1.5 0 0 1 19 20H9l-6.5-8L9 4Z" />
+      <path d="M13.5 9.5 18 14" />
+      <path d="M18 9.5 13.5 14" />
+    </svg>
+  );
+}
+
 /** Etiqueta de alerta animada (banderín) que se usa sobre productos
  * vencidos (rojo) o por vencer (ámbar), igual que en el diseño. */
 export function IconAlertaBandera({
@@ -248,6 +290,7 @@ export function IconAlertaBandera({
       width="22"
       height="21"
       fill="none"
+      data-mt-sync="1"
       className={`${base} ${className}`}
       style={{ animation: `${animacion} 2.6s ease-in-out infinite` }}
     >

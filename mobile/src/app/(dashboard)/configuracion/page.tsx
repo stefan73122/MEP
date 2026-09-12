@@ -35,7 +35,7 @@ export default function ConfiguracionPage() {
       <div className="rounded-xl bg-white p-4">
         <h2 className="mb-3 text-sm font-semibold text-slate-900">Negocio</h2>
         <ConfiguracionForm
-          nombreNegocio={configuracion?.nombreNegocio ?? "Mi Tienda"}
+          nombreNegocio={configuracion?.nombreNegocio ?? "MIP"}
           moneda={configuracion?.moneda ?? "BOB"}
           simboloMoneda={configuracion?.simboloMoneda ?? "Bs"}
           diasAlertaVencimiento={configuracion?.diasAlertaVencimiento ?? DIAS_ALERTA_VENCIMIENTO_DEFECTO}
@@ -45,7 +45,12 @@ export default function ConfiguracionPage() {
 
       <div className="rounded-xl bg-white p-4">
         <h2 className="mb-3 text-sm font-semibold text-slate-900">PIN de acceso</h2>
-        <PinForm pinConfigurado={!!configuracion?.pinHash} onCambio={recargar} />
+        <PinForm
+          pinConfigurado={!!configuracion?.pinHash}
+          bloqueoActivado={!!configuracion?.bloqueoActivado}
+          huellaActivada={!!configuracion?.huellaActivada}
+          onCambio={recargar}
+        />
       </div>
     </div>
   );

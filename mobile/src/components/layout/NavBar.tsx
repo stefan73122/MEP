@@ -8,6 +8,7 @@ import { DIAS_ALERTA_VENCIMIENTO_DEFECTO } from "@/lib/constants";
 import { PANTALLAS_PRINCIPALES } from "@/lib/pantallasPrincipales";
 import { IconAlertaBandera } from "@/components/ui/icons";
 import { usePagerContext } from "@/components/pager/PagerContext";
+import { useTecladoAbierto } from "@/lib/useTecladoAbierto";
 
 // "/" (Inicio) sólo debe marcarse activo en la raíz exacta: con startsWith
 // a secas, cualquier ruta (todas empiezan con "/") quedaría marcada.
@@ -19,6 +20,7 @@ function esEnlaceActivo(pathname: string, href: string): boolean {
 export function NavBar() {
   const pathname = usePathname();
   const pager = usePagerContext();
+  const tecladoAbierto = useTecladoAbierto();
   const [alertas, setAlertas] = useState({ productos: false, clientes: false });
 
   useEffect(() => {
@@ -86,8 +88,15 @@ export function NavBar() {
         </ul>
       </nav>
 
-      {/* Celular: barra inferior de pestañas */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex items-stretch gap-0.5 border-t border-slate-200 bg-white px-2 pt-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:hidden">
+      {/* Celular: barra inferior de pestañas.
+          Se esconde deslizándose hacia abajo mientras el teclado está
+          abierto (si no, queda flotando encima tapando contenido) y vuelve
+          a subir sola al cerrarse. */}
+      <nav
+        className={`fixed inset-x-0 bottom-0 z-10 flex items-stretch gap-0.5 border-t border-slate-200 bg-white px-2 pt-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] transition-transform duration-200 md:hidden ${
+          tecladoAbierto ? "translate-y-full" : "translate-y-0"
+        }`}
+      >
         {PANTALLAS_PRINCIPALES.map(({ href, etiqueta, Icono, alerta }, indice) => {
           const activo = indiceEnVivo !== null ? Math.round(indiceEnVivo) === indice : esEnlaceActivo(pathname, href);
           // Mientras se arrastra, la intensidad del resaltado sigue al dedo
@@ -107,7 +116,7 @@ export function NavBar() {
             >
               {conAlerta && (
                 <span className="absolute top-0.5 right-1">
-                  <IconAlertaBandera contexto="nav" className="h-[18px] w-[18px]" />
+                  <IconAlertaBandera contexto="nav" className="h-[20px] w-[21px]" />
                 </span>
               )}
               <Icono className={`skew-x-[8deg] ${intensidad > 0.5 ? "text-black" : "text-slate-500"}`} />

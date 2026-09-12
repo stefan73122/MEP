@@ -9,12 +9,13 @@ export type Configuracion = {
   simboloMoneda: string;
   pinHash: string | null;
   diasAlertaVencimiento: number;
+  bloqueoActivado: boolean;
+  huellaActivada: boolean;
   updatedAt: Date;
 };
 
 export type Producto = {
   id: number;
-  sku: string;
   nombre: string;
   categoria: string | null;
   unidadMedida: string;
@@ -137,7 +138,7 @@ export type AuditLog = {
 };
 
 // Error de restricción única (equivalente al P2002 de Prisma), usado para dar
-// un mensaje legible cuando se repite un SKU.
+// un mensaje legible cuando se repite un valor que debe ser único.
 export class ErrorRestriccionUnica extends Error {
   constructor(mensaje: string) {
     super(mensaje);

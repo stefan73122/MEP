@@ -65,8 +65,7 @@ export function ClientesContenido({ filtroInicial }: { filtroInicial?: FiltroCli
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold text-slate-900">Clientes</h1>
+      <div className="flex items-center justify-end gap-2">
         <Link
           href="/clientes/nuevo"
           className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:brightness-110"

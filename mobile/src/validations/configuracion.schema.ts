@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LARGO_PIN_MAXIMO, LARGO_PIN_MINIMO } from "@/lib/constants";
+import { LARGO_PIN } from "@/lib/constants";
 
 export const actualizarConfiguracionSchema = z.object({
   nombreNegocio: z.string().trim().min(1, "Ingresá el nombre del negocio").max(120),
@@ -14,8 +14,7 @@ const pinTexto = z
   .string()
   .trim()
   .regex(/^\d+$/, "El PIN solo puede tener números")
-  .min(LARGO_PIN_MINIMO, `El PIN debe tener entre ${LARGO_PIN_MINIMO} y ${LARGO_PIN_MAXIMO} números`)
-  .max(LARGO_PIN_MAXIMO, `El PIN debe tener entre ${LARGO_PIN_MINIMO} y ${LARGO_PIN_MAXIMO} números`);
+  .length(LARGO_PIN, `El PIN debe tener ${LARGO_PIN} números`);
 
 export const configurarPinSchema = z
   .object({

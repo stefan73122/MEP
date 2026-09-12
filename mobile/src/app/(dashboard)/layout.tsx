@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { pinConfigurado } from "@/lib/auth";
 import { db } from "@/lib/db/client";
 import { AuthGate } from "@/components/layout/AuthGate";
 import { NavBar } from "@/components/layout/NavBar";
@@ -11,6 +10,7 @@ import { LogoutButton } from "@/components/layout/LogoutButton";
 import { IconAjustes } from "@/components/ui/icons";
 import { PagerPrincipal } from "@/components/pager/PagerPrincipal";
 import { PANTALLAS_PRINCIPALES } from "@/lib/pantallasPrincipales";
+import { sincronizarAlertas } from "@/lib/sincronizarAlertas";
 
 // Mismo quiebre que ya usa NavBar para elegir barra inferior vs. sidebar
 // (md:hidden / hidden md:block): el carrusel de swipe solo tiene sentido en
@@ -32,14 +32,23 @@ function useEsMobile(): boolean {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const esMobile = useEsMobile();
-  const [nombreNegocio, setNombreNegocio] = useState("Mi Tienda");
-  const [hayPin, setHayPin] = useState(false);
+  const [bloqueoActivo, setBloqueoActivo] = useState(false);
 
   useEffect(() => {
-    Promise.all([db.configuracion.findFirst(), pinConfigurado()]).then(([configuracion, pin]) => {
-      if (configuracion?.nombreNegocio) setNombreNegocio(configuracion.nombreNegocio);
-      setHayPin(pin);
+    db.configuracion.findFirst().then((configuracion) => {
+      setBloqueoActivo(!!configuracion?.bloqueoActivado && !!configuracion?.pinHash);
     });
+  }, []);
+
+  // Igual que el componentDidMount/componentDidUpdate del diseño original:
+  // cada vez que aparece una alerta nueva en el DOM (cambio de pantalla,
+  // datos que terminan de cargar, swipe entre vecinas...) se resincroniza
+  // su fase con las que ya estaban, así laten todas juntas.
+  useEffect(() => {
+    sincronizarAlertas();
+    const observer = new MutationObserver(() => sincronizarAlertas());
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
   }, []);
 
   // El carrusel solo reemplaza el contenido en las 5 rutas principales; las
@@ -55,10 +64,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div className="flex flex-1 flex-col">
           <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 md:pt-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-500 shadow-[0_2px_0_rgba(0,0,0,0.5)]">
-              <span className="text-sm font-black italic tracking-tighter text-black">MT</span>
+            {/* eslint-disable-next-line @next/next/no-img-element -- sin optimización de imágenes, es una export estática sin servidor */}
+            <img src="/logo-mip.png" alt="MIP" className="h-9 w-9 shrink-0 object-contain" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm leading-tight font-bold text-slate-900">MIP</p>
+              <p className="truncate text-xs leading-tight text-slate-500">Mi Inventario Personal</p>
             </div>
-            <p className="flex-1 truncate text-sm font-semibold text-slate-900">{nombreNegocio}</p>
             <Link
               href="/configuracion"
               aria-label="Ajustes"
@@ -66,7 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <IconAjustes className="h-5 w-5" />
             </Link>
-            {hayPin && <LogoutButton />}
+            {bloqueoActivo && <LogoutButton />}
           </header>
 
           <main className="flex-1 px-4 py-4 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-4">

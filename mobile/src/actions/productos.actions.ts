@@ -3,8 +3,7 @@ import { requireAcceso } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/audit";
 import { textoACentavos } from "@/lib/money";
 import { textoAUnidadesMinimas } from "@/lib/stock";
-import { inicioDelDia, textoAFecha } from "@/lib/dates";
-import { ErrorRestriccionUnica } from "@/lib/db/types";
+import { textoAFecha } from "@/lib/dates";
 import { actualizarProductoSchema, crearProductoSchema } from "@/validations/producto.schema";
 import type { TipoVenta } from "@/lib/constants";
 
@@ -58,13 +57,11 @@ export async function crearProducto(
     if (!datos.fechaVencimientoInicialTexto) {
       return { error: "Ingresá la fecha de vencimiento del primer lote" };
     }
+    // Se permite una fecha ya pasada a propósito (ver registrarEntradaLote).
     try {
       fechaVencimientoInicial = textoAFecha(datos.fechaVencimientoInicialTexto);
     } catch (error) {
       return { error: (error as Error).message };
-    }
-    if (fechaVencimientoInicial < inicioDelDia(new Date())) {
-      return { error: "La fecha de vencimiento no puede ser anterior a hoy" };
     }
   }
 
@@ -72,7 +69,6 @@ export async function crearProducto(
   try {
     productoId = await db.$transaction(async (tx) => {
       const producto = await tx.producto.create({
-        sku: datos.sku,
         nombre: datos.nombre,
         categoria: datos.categoria ?? null,
         unidadMedida,
@@ -110,15 +106,12 @@ export async function crearProducto(
         entidad: "Producto",
         entidadId: producto.id,
         accion: "CREAR",
-        detalle: { sku: datos.sku, nombre: datos.nombre },
+        detalle: { nombre: datos.nombre },
       });
 
       return producto.id;
     });
-  } catch (error) {
-    if (error instanceof ErrorRestriccionUnica) {
-      return { error: `Ya existe un producto con el código "${datos.sku}"` };
-    }
+  } catch {
     return { error: "No se pudo guardar el producto. Intentá de nuevo." };
   }
 

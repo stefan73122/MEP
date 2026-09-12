@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo } from "next/font/google";
+import { SplashGate } from "@/components/layout/SplashGate";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -8,7 +9,7 @@ const archivo = Archivo({
 });
 
 export const metadata: Metadata = {
-  title: "Mi Tienda",
+  title: "MIP",
   description: "Sistema administrativo para vendedores y tiendas pequeñas (offline)",
 };
 
@@ -26,7 +27,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={archivo.variable}>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <SplashGate>{children}</SplashGate>
+      </body>
     </html>
   );
 }

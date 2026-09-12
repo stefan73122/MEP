@@ -17,7 +17,6 @@ export type EstadoAnulacion = { error?: string; exito?: boolean };
 
 export type ProductoBusquedaVenta = {
   id: number;
-  sku: string;
   nombre: string;
   unidadMedida: string;
   factorConversion: number;
@@ -39,7 +38,7 @@ export async function buscarProductosVenta(query: string): Promise<ProductoBusqu
   const productos = await db.producto.findMany({ activo: true });
 
   const coincidencias = productos
-    .filter((p) => p.nombre.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
+    .filter((p) => p.nombre.toLowerCase().includes(q))
     .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
     .slice(0, 15);
 
@@ -56,7 +55,6 @@ export async function buscarProductosVenta(query: string): Promise<ProductoBusqu
 
     resultados.push({
       id: producto.id,
-      sku: producto.sku,
       nombre: producto.nombre,
       unidadMedida: producto.unidadMedida,
       factorConversion: producto.factorConversion,
@@ -95,12 +93,9 @@ export async function crearProductoRapido(
     return { error: "Ingresá un precio de venta válido" };
   }
 
-  const sku = `RAPIDO-${Date.now()}`;
-
   try {
     const producto = await db.$transaction(async (tx) => {
       const nuevo = await tx.producto.create({
-        sku,
         nombre: nombreLimpio,
         unidadMedida: "unidad",
         factorConversion: 1,
@@ -132,7 +127,6 @@ export async function crearProductoRapido(
     return {
       producto: {
         id: producto.id,
-        sku: producto.sku,
         nombre: producto.nombre,
         unidadMedida: producto.unidadMedida,
         factorConversion: producto.factorConversion,

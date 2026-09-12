@@ -31,7 +31,7 @@ export function ImportarForm() {
             <ul className="list-disc pl-5 text-xs text-slate-600">
               {errores.map((e) => (
                 <li key={e.numero}>
-                  Fila {e.numero} ({e.sku}): {e.mensaje}
+                  Fila {e.numero} ({e.nombre}): {e.mensaje}
                 </li>
               ))}
             </ul>
@@ -89,7 +89,6 @@ export function ImportarForm() {
           >
             <p className="font-medium text-slate-900">
               Fila {fila.numero}: {fila.nombre || "(sin nombre)"}
-              {fila.sku ? ` (${fila.sku})` : ""}
             </p>
             {fila.errores.length > 0 ? (
               <ul className="list-disc pl-4 text-xs text-danger-600">

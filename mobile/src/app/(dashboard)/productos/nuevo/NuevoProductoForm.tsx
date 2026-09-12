@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { crearProducto, type EstadoFormularioProducto } from "@/actions/productos.actions";
 import type { TipoVenta } from "@/lib/constants";
 import { CampoFecha } from "@/components/forms/CampoFecha";
-import { inicioDelDia } from "@/lib/dates";
 
 const ESTADO_INICIAL: EstadoFormularioProducto = {};
 
@@ -25,26 +24,18 @@ export function NuevoProductoForm() {
 
   return (
     <form action={formAction} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label htmlFor="sku" className={clasesLabel}>
-            Código / SKU
-          </label>
-          <input id="sku" name="sku" type="text" required autoFocus className={clasesInput} />
-        </div>
-        <div>
-          <label htmlFor="categoria" className={clasesLabel}>
-            Categoría
-          </label>
-          <input id="categoria" name="categoria" type="text" className={clasesInput} />
-        </div>
-      </div>
-
       <div>
         <label htmlFor="nombre" className={clasesLabel}>
           Nombre del producto
         </label>
-        <input id="nombre" name="nombre" type="text" required className={clasesInput} />
+        <input id="nombre" name="nombre" type="text" required autoFocus className={clasesInput} />
+      </div>
+
+      <div>
+        <label htmlFor="categoria" className={clasesLabel}>
+          Categoría
+        </label>
+        <input id="categoria" name="categoria" type="text" className={clasesInput} />
       </div>
 
       <fieldset>
@@ -141,34 +132,34 @@ export function NuevoProductoForm() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label htmlFor="stockInicialTexto" className={clasesLabel}>
-            {perecedero ? "Cantidad del primer lote" : "Stock inicial"}
-          </label>
-          <input
-            id="stockInicialTexto"
-            name="stockInicialTexto"
-            type="text"
-            inputMode="decimal"
-            placeholder="0"
-            className={clasesInput}
-          />
-        </div>
-        <div>
-          <label htmlFor="stockMinimoTexto" className={clasesLabel}>
-            Stock mínimo
-          </label>
-          <input
-            id="stockMinimoTexto"
-            name="stockMinimoTexto"
-            type="text"
-            inputMode="decimal"
-            placeholder="0"
-            required
-            className={clasesInput}
-          />
-        </div>
+      {/* Grid de 2 filas x 2 columnas (no dos <div> independientes): así las
+          etiquetas quedan en la misma fila y los campos arrancan siempre a
+          la misma altura, sin importar si una etiqueta ocupa más líneas
+          que la otra ("Cantidad del primer lote" vs. "Stock mínimo"). */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+        <label htmlFor="stockInicialTexto" className={clasesLabel}>
+          {perecedero ? "Cantidad del primer lote" : "Stock inicial"}
+        </label>
+        <label htmlFor="stockMinimoTexto" className={clasesLabel}>
+          Stock mínimo
+        </label>
+        <input
+          id="stockInicialTexto"
+          name="stockInicialTexto"
+          type="text"
+          inputMode="decimal"
+          placeholder="0"
+          className={`self-start ${clasesInput}`}
+        />
+        <input
+          id="stockMinimoTexto"
+          name="stockMinimoTexto"
+          type="text"
+          inputMode="decimal"
+          placeholder="0"
+          required
+          className={`self-start ${clasesInput}`}
+        />
       </div>
 
       {perecedero && (
@@ -177,7 +168,6 @@ export function NuevoProductoForm() {
             id="fechaVencimientoInicialTexto"
             name="fechaVencimientoInicialTexto"
             label="Vencimiento del primer lote"
-            min={inicioDelDia(new Date())}
           />
           <p className="mt-1 text-xs text-slate-500">
             Hace falta solo si cargás una cantidad en &quot;Cantidad del primer lote&quot;. Después vas a

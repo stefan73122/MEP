@@ -14,7 +14,6 @@ const checkboxABooleano = z
   .transform((valor) => valor === "on" || valor === "true");
 
 export const crearProductoSchema = z.object({
-  sku: z.string().trim().min(1, "El código es obligatorio").max(40),
   nombre: z.string().trim().min(1, "El nombre es obligatorio").max(120),
   categoria: textoOpcional,
   tipoVenta: z.enum(TIPOS_VENTA, { message: "Elegí cómo se vende el producto" }),

@@ -151,8 +151,6 @@ export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroRep
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <h1 className="text-lg font-semibold text-slate-900">Reportes</h1>
-
       {(productosVencidos > 0 || productosPorVencer > 0) && (
         <div className="flex flex-wrap gap-2">
           {productosVencidos > 0 && (

@@ -3,7 +3,6 @@
 import { useActionState, useEffect, useState } from "react";
 import { registrarEntradaLote, type EstadoLote } from "@/actions/lotes.actions";
 import { CampoFecha } from "@/components/forms/CampoFecha";
-import { inicioDelDia } from "@/lib/dates";
 
 const ESTADO_INICIAL: EstadoLote = {};
 
@@ -41,7 +40,7 @@ export function EntradaLoteForm({
           </label>
           <input id="cantidadTexto" name="cantidadTexto" type="text" inputMode="decimal" required className={clasesInput} />
         </div>
-        <CampoFecha id="fechaVencimientoTexto" name="fechaVencimientoTexto" label="Vencimiento" min={inicioDelDia(new Date())} required />
+        <CampoFecha id="fechaVencimientoTexto" name="fechaVencimientoTexto" label="Vencimiento" required />
       </div>
 
       <div>

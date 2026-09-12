@@ -6,7 +6,6 @@ const DEBOUNCE_MS = 400;
 
 export type ItemBorrador = {
   productoId: number;
-  sku: string;
   nombre: string;
   unidadMedida: string;
   factorConversion: number;
@@ -15,6 +14,9 @@ export type ItemBorrador = {
   proximoVencimiento: string | null;
   cantidadTexto: string;
   descuentoTexto: string;
+  // Se calcula una sola vez al agregarlo al carrito (ver VentaForm): si el
+  // lote que se despacharía (FEFO) ya estaba vencido en ese momento.
+  vencido?: boolean;
 };
 
 export type BorradorVenta = {

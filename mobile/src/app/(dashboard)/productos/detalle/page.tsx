@@ -99,7 +99,7 @@ function ProductoDetalleContenido() {
           <div>
             <h1 className="text-lg font-semibold text-slate-900">{producto.nombre}</h1>
             <p className="text-xs text-slate-500">
-              Código: {producto.sku} · {tipoVentaTexto}
+              {tipoVentaTexto}
               {producto.categoria ? ` · ${producto.categoria}` : ""}
               {producto.perecedero ? " · Perecedero" : ""}
             </p>

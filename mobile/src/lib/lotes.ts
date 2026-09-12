@@ -3,8 +3,9 @@ import type { LoteConProducto } from "./db/types";
 
 export type LoteVigente = { id: number; cantidad: number; fechaVencimiento: Date };
 
-// Lotes con stock y todavía no vencidos, del que vence antes al que vence
-// después (FEFO: first expired, first out).
+// Lotes con stock, del que vence antes al que vence después (FEFO: first
+// expired, first out) — incluye lotes ya vencidos a propósito, para que el
+// stock vencido se pueda vender/descontar igual (ver findVendibles).
 export function obtenerLotesVendibles(
   db: Db,
   productoId: number,
@@ -24,10 +25,12 @@ export async function calcularStockVendible(
 
 export type LoteAfectado = { loteId: number; cantidad: number; fechaVencimiento: Date };
 
-// Descuenta `cantidad` de los lotes vigentes empezando por el que vence antes.
-// Los lotes vencidos nunca se tocan (no se pueden vender). Debe llamarse
-// dentro de una transacción ($transaction). Devuelve qué lote(s) se afectaron
-// y en cuánto, para poder registrar el/los movimiento(s) de inventario.
+// Descuenta `cantidad` de los lotes empezando por el que vence antes — los
+// lotes ya vencidos entran primero en ese orden, así que se descuentan
+// antes que los vigentes (no hace falta lógica aparte para venderlos).
+// Debe llamarse dentro de una transacción ($transaction). Devuelve qué
+// lote(s) se afectaron y en cuánto, para poder registrar el/los
+// movimiento(s) de inventario.
 export async function descontarFEFO(
   tx: Db,
   productoId: number,
@@ -40,8 +43,8 @@ export async function descontarFEFO(
   if (cantidad > totalVendible) {
     throw new Error(
       totalVendible === 0
-        ? "No hay lotes vigentes de este producto (puede que estén todos vencidos)"
-        : "Stock insuficiente en los lotes vigentes de este producto",
+        ? "No hay lotes de este producto con stock"
+        : "Stock insuficiente en los lotes de este producto",
     );
   }
 

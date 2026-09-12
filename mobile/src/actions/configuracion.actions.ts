@@ -15,7 +15,7 @@ export type EstadoConfiguracion = { error?: string; exito?: boolean };
 async function obtenerOCrearConfiguracion(): Promise<Configuracion> {
   const existente = await db.configuracion.findFirst();
   if (existente) return existente;
-  return db.$transaction((tx) => tx.configuracion.create({ nombreNegocio: "Mi Tienda" }));
+  return db.$transaction((tx) => tx.configuracion.create({ nombreNegocio: "MIP" }));
 }
 
 export async function actualizarConfiguracion(
@@ -73,5 +73,46 @@ export async function quitarPin(): Promise<void> {
   await requireAcceso();
 
   const configuracion = await obtenerOCrearConfiguracion();
-  await db.$transaction((tx) => tx.configuracion.update(configuracion.id, { pinHash: null }));
+  // Sin PIN no hay alternativa de desbloqueo, así que el bloqueo y la huella
+  // (que dependen de él como respaldo) dejan de tener sentido y se apagan.
+  await db.$transaction((tx) =>
+    tx.configuracion.update(configuracion.id, { pinHash: null, bloqueoActivado: false, huellaActivada: false }),
+  );
+}
+
+export async function activarBloqueo(): Promise<EstadoConfiguracion> {
+  await requireAcceso();
+
+  const configuracion = await obtenerOCrearConfiguracion();
+  if (!configuracion.pinHash) {
+    return { error: "Primero definí un PIN." };
+  }
+
+  await db.$transaction((tx) => tx.configuracion.update(configuracion.id, { bloqueoActivado: true }));
+  return { exito: true };
+}
+
+export async function desactivarBloqueo(): Promise<void> {
+  await requireAcceso();
+
+  const configuracion = await obtenerOCrearConfiguracion();
+  // La huella es solo un atajo para el bloqueo: si el bloqueo se apaga, no
+  // tiene sentido dejarla marcada como activa.
+  await db.$transaction((tx) =>
+    tx.configuracion.update(configuracion.id, { bloqueoActivado: false, huellaActivada: false }),
+  );
+}
+
+export async function activarHuella(): Promise<void> {
+  await requireAcceso();
+
+  const configuracion = await obtenerOCrearConfiguracion();
+  await db.$transaction((tx) => tx.configuracion.update(configuracion.id, { huellaActivada: true }));
+}
+
+export async function desactivarHuella(): Promise<void> {
+  await requireAcceso();
+
+  const configuracion = await obtenerOCrearConfiguracion();
+  await db.$transaction((tx) => tx.configuracion.update(configuracion.id, { huellaActivada: false }));
 }

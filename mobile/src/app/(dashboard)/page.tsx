@@ -38,8 +38,6 @@ export default function TableroPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-semibold text-slate-900">Inicio</h1>
-
       {/* Total vendido hoy: dato principal */}
       <div className="rounded-xl bg-white p-5 text-center">
         <p className="text-xs font-medium text-slate-500">Vendido hoy</p>

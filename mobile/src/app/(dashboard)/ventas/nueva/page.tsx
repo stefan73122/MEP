@@ -27,8 +27,7 @@ export function NuevaVentaPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-900">Vender</h1>
+      <div className="flex items-center justify-end">
         <Link href="/ventas" className="text-sm text-slate-500 hover:underline">
           Ver ventas →
         </Link>

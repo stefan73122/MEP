@@ -1,5 +1,5 @@
 import { db } from "@/lib/db/client";
-import { crearSesion, eliminarSesion, verificarPin } from "@/lib/auth";
+import { marcarDesbloqueado, verificarPin } from "@/lib/auth";
 import { ingresarPinSchema } from "@/validations/auth.schema";
 
 export type EstadoLogin = { error?: string; exito?: boolean };
@@ -14,8 +14,9 @@ export async function ingresarConPinAction(
   }
 
   const configuracion = await db.configuracion.findFirst();
-  if (!configuracion?.pinHash) {
-    // El PIN se desactivó mientras se mostraba esta pantalla: no hace falta validar nada.
+  if (!configuracion?.bloqueoActivado || !configuracion.pinHash) {
+    // El bloqueo se desactivó mientras se mostraba esta pantalla: no hace falta validar nada.
+    marcarDesbloqueado();
     return { exito: true };
   }
 
@@ -24,10 +25,6 @@ export async function ingresarConPinAction(
     return { error: "PIN incorrecto" };
   }
 
-  await crearSesion();
+  marcarDesbloqueado();
   return { exito: true };
-}
-
-export async function logoutAction(): Promise<void> {
-  await eliminarSesion();
 }

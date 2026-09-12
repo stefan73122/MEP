@@ -12,6 +12,7 @@ import {
 import { crearClienteRapido } from "@/actions/clientes.actions";
 import { centavosATexto, textoACentavos } from "@/lib/money";
 import { textoAUnidadesMinimas } from "@/lib/stock";
+import { inicioDelDia, textoAFecha } from "@/lib/dates";
 import type { FormaPago } from "@/lib/constants";
 import { IconAlertaTriangulo, IconBuscar } from "@/components/ui/icons";
 import { borrarBorrador, guardarBorradorConDemora, type BorradorVenta } from "@/lib/borradorVenta";
@@ -23,7 +24,6 @@ const clasesInput =
 
 type ItemCarrito = {
   productoId: number;
-  sku: string;
   nombre: string;
   unidadMedida: string;
   factorConversion: number;
@@ -32,7 +32,23 @@ type ItemCarrito = {
   proximoVencimiento: string | null;
   cantidadTexto: string;
   descuentoTexto: string;
+  // Se calcula una sola vez al agregarlo (ver agregarAlCarrito): si el lote
+  // que se despacharía (FEFO) ya estaba vencido en ese momento.
+  vencido?: boolean;
 };
+
+// El lote que se despacharía (FEFO) para este producto ya venció. Vender
+// stock vencido está permitido a propósito (el dueño puede tener ese stock
+// físicamente en la tienda), pero si el producto es perecedero se avisa
+// antes de agregarlo — si no es perecedero, alcanza con una nota discreta.
+function loteVencido(proximoVencimiento: string | null): boolean {
+  if (!proximoVencimiento) return false;
+  try {
+    return textoAFecha(proximoVencimiento) < inicioDelDia(new Date());
+  } catch {
+    return false;
+  }
+}
 
 type ClienteOpcion = { id: number; nombre: string };
 
@@ -85,6 +101,7 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
   const [resultados, setResultados] = useState<ProductoBusquedaVenta[]>([]);
   const [buscando, setBuscando] = useState(false);
   const [carrito, setCarrito] = useState<ItemCarrito[]>(() => borradorInicial?.carrito ?? []);
+  const [productoPendienteVencido, setProductoPendienteVencido] = useState<ProductoBusquedaVenta | null>(null);
   const [clienteId, setClienteId] = useState(() => borradorInicial?.clienteId ?? "");
   const [formaPago, setFormaPago] = useState<FormaPago>(() => borradorInicial?.formaPago ?? "EFECTIVO");
   const [descuentoTotalTexto, setDescuentoTotalTexto] = useState(() => borradorInicial?.descuentoTotalTexto ?? "");
@@ -148,7 +165,7 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
     return () => clearTimeout(id);
   }, [query]);
 
-  function agregarProducto(producto: ProductoBusquedaVenta) {
+  function agregarAlCarrito(producto: ProductoBusquedaVenta) {
     setCarrito((prev) => {
       const existente = prev.find((item) => item.productoId === producto.id);
       if (!existente) {
@@ -156,7 +173,6 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
           ...prev,
           {
             productoId: producto.id,
-            sku: producto.sku,
             nombre: producto.nombre,
             unidadMedida: producto.unidadMedida,
             factorConversion: producto.factorConversion,
@@ -165,6 +181,7 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
             proximoVencimiento: producto.proximoVencimiento,
             cantidadTexto: "1",
             descuentoTexto: "",
+            vencido: loteVencido(producto.proximoVencimiento),
           },
         ];
       }
@@ -176,6 +193,25 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
     setQuery("");
     setResultados([]);
     setMostrarNuevoProducto(false);
+  }
+
+  // Punto de entrada real al tocar un resultado de búsqueda: si el lote que
+  // se despacharía ya venció y el producto es perecedero, primero hay que
+  // confirmar (advertencia clara). Si no es perecedero, se agrega directo —
+  // el aviso "Vencido" queda como nota discreta en la fila del carrito.
+  function agregarProducto(producto: ProductoBusquedaVenta) {
+    if (loteVencido(producto.proximoVencimiento) && producto.perecedero) {
+      setProductoPendienteVencido(producto);
+      setResultados([]);
+      return;
+    }
+    agregarAlCarrito(producto);
+  }
+
+  function confirmarAgregarVencido() {
+    if (!productoPendienteVencido) return;
+    agregarAlCarrito(productoPendienteVencido);
+    setProductoPendienteVencido(null);
   }
 
   function abrirNuevoProducto() {
@@ -277,26 +313,59 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
         </div>
         {resultados.length > 0 && (
           <ul className="absolute z-10 mt-1 w-full space-y-1 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
-            {resultados.map((producto) => (
-              <li key={producto.id}>
-                <button
-                  type="button"
-                  onClick={() => agregarProducto(producto)}
-                  className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-slate-100"
-                >
-                  <span className="min-w-0 truncate">
-                    {producto.nombre} <span className="text-xs text-slate-500">({producto.sku})</span>
-                    {producto.proximoVencimiento && (
-                      <span className="block text-xs text-slate-400">Vence {producto.proximoVencimiento}</span>
-                    )}
-                  </span>
-                  <span className="shrink-0 text-xs font-medium text-slate-600">
-                    {centavosATexto(producto.precioVenta, simbolo)}
-                  </span>
-                </button>
-              </li>
-            ))}
+            {resultados.map((producto) => {
+              const vencido = loteVencido(producto.proximoVencimiento);
+              return (
+                <li key={producto.id}>
+                  <button
+                    type="button"
+                    onClick={() => agregarProducto(producto)}
+                    className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-slate-100"
+                  >
+                    <span className="min-w-0 truncate">
+                      {producto.nombre}
+                      {producto.proximoVencimiento && (
+                        <span className={`block text-xs ${vencido ? "font-medium text-danger-600" : "text-slate-400"}`}>
+                          {vencido ? "Vencido " : "Vence "}
+                          {producto.proximoVencimiento}
+                        </span>
+                      )}
+                    </span>
+                    <span className="shrink-0 text-xs font-medium text-slate-600">
+                      {centavosATexto(producto.precioVenta, simbolo)}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
+        )}
+
+        {productoPendienteVencido && (
+          <div className="absolute z-10 mt-1 w-full space-y-2 rounded-lg border border-danger-600 bg-white p-3 shadow-lg">
+            <p className="flex items-center gap-2 text-sm font-medium text-danger-600">
+              <IconAlertaTriangulo className="h-4 w-4 shrink-0" />
+              &quot;{productoPendienteVencido.nombre}&quot; tiene el lote vencido desde el{" "}
+              {productoPendienteVencido.proximoVencimiento}.
+            </p>
+            <p className="text-xs text-slate-500">Es perecedero: confirmá que querés venderlo igual.</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={confirmarAgregarVencido}
+                className="flex-1 rounded-lg border border-danger-600 px-3 py-2 text-sm font-medium text-danger-600 hover:bg-red-50"
+              >
+                Agregar igual
+              </button>
+              <button
+                type="button"
+                onClick={() => setProductoPendienteVencido(null)}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
         )}
 
         {sinResultados && !mostrarNuevoProducto && (
@@ -386,7 +455,12 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
                   <p className="truncate text-sm font-medium text-slate-900">{item.nombre}</p>
                   <p className="text-xs text-slate-500">
                     {centavosATexto(item.precioVenta, simbolo)} / {item.unidadMedida}
-                    {item.proximoVencimiento && <span className="text-slate-400"> · vence {item.proximoVencimiento}</span>}
+                    {item.proximoVencimiento && (
+                      <span className={item.vencido ? "font-medium text-danger-600" : "text-slate-400"}>
+                        {" "}
+                        · {item.vencido ? "vencido desde" : "vence"} {item.proximoVencimiento}
+                      </span>
+                    )}
                   </p>
                 </div>
                 <button

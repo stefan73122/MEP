@@ -11,12 +11,13 @@ CREATE TABLE IF NOT EXISTS Configuracion (
   simboloMoneda TEXT NOT NULL DEFAULT 'Bs',
   pinHash TEXT,
   diasAlertaVencimiento INTEGER NOT NULL DEFAULT 30,
+  bloqueoActivado INTEGER NOT NULL DEFAULT 0,
+  huellaActivada INTEGER NOT NULL DEFAULT 0,
   updatedAt INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS Producto (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  sku TEXT NOT NULL UNIQUE,
   nombre TEXT NOT NULL,
   categoria TEXT,
   unidadMedida TEXT NOT NULL DEFAULT 'unidad',
@@ -137,6 +138,24 @@ CREATE INDEX IF NOT EXISTS idx_auditlog_entidad ON AuditLog (entidad, entidadId)
 
 let promesaConexion: Promise<SQLiteDBConnection> | null = null;
 
+// No hay sistema de migraciones: CREATE TABLE IF NOT EXISTS no agrega
+// columnas a una tabla ya existente. Para instalaciones previas a esta
+// versión (Configuracion ya creada sin bloqueoActivado/huellaActivada),
+// hace falta un ALTER TABLE puntual. Se revisa con PRAGMA table_info en
+// vez de asumir la versión de la app, así funciona tanto en instalaciones
+// nuevas (columnas ya en el CREATE TABLE, no pasa nada) como viejas.
+async function agregarColumnasFaltantes(conexion: SQLiteDBConnection): Promise<void> {
+  const info = await conexion.query("PRAGMA table_info(Configuracion);");
+  const columnas = new Set((info.values ?? []).map((fila) => fila.name as string));
+
+  if (!columnas.has("bloqueoActivado")) {
+    await conexion.execute("ALTER TABLE Configuracion ADD COLUMN bloqueoActivado INTEGER NOT NULL DEFAULT 0;");
+  }
+  if (!columnas.has("huellaActivada")) {
+    await conexion.execute("ALTER TABLE Configuracion ADD COLUMN huellaActivada INTEGER NOT NULL DEFAULT 0;");
+  }
+}
+
 async function abrirConexion(): Promise<SQLiteDBConnection> {
   const sqlite = new SQLiteConnection(CapacitorSQLite);
   const esWeb = Capacitor.getPlatform() === "web";
@@ -162,6 +181,7 @@ async function abrirConexion(): Promise<SQLiteDBConnection> {
 
   await conexion.open();
   await conexion.execute(ESQUEMA);
+  await agregarColumnasFaltantes(conexion);
   if (esWeb) {
     await sqlite.saveToStore(NOMBRE_DB);
   }

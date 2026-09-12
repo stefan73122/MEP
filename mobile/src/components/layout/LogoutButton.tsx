@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { logoutAction } from "@/actions/auth.actions";
+import { bloquear } from "@/lib/auth";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -12,15 +12,15 @@ export function LogoutButton() {
     <button
       type="button"
       onClick={() =>
-        iniciarTransicion(async () => {
-          await logoutAction();
+        iniciarTransicion(() => {
+          bloquear();
           router.replace("/login");
         })
       }
       disabled={enviando}
       className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-60"
     >
-      Salir
+      Bloquear
     </button>
   );
 }

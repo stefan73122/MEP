@@ -63,9 +63,7 @@ export function ProductosContenido({ filtroInicial }: { filtroInicial?: FiltroPr
   let productos = todosActivos;
   if (q) {
     const qNormalizado = q.trim().toLowerCase();
-    productos = productos.filter(
-      (p) => p.nombre.toLowerCase().includes(qNormalizado) || p.sku.toLowerCase().includes(qNormalizado),
-    );
+    productos = productos.filter((p) => p.nombre.toLowerCase().includes(qNormalizado));
   }
   if (bajo) {
     productos = productos.filter((p) => p.stockActual < p.stockMinimo);
@@ -79,8 +77,7 @@ export function ProductosContenido({ filtroInicial }: { filtroInicial?: FiltroPr
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold text-slate-900">Productos</h1>
+      <div className="flex items-center justify-end gap-2">
         <div className="flex gap-2">
           <Link
             href="/productos/importar"
@@ -103,7 +100,7 @@ export function ProductosContenido({ filtroInicial }: { filtroInicial?: FiltroPr
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar por nombre o código"
+          placeholder="Buscar por nombre"
           className="w-full rounded-lg border border-slate-300 py-2.5 pr-3 pl-9 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
         />
       </div>
@@ -159,7 +156,7 @@ export function ProductosContenido({ filtroInicial }: { filtroInicial?: FiltroPr
                   }`}
                 >
                   {(vencido || porVencer) && (
-                    <span className="absolute -top-2 left-1 z-10">
+                    <span className="absolute top-[-9px] left-[7px] z-10">
                       <IconAlertaBandera variante={vencido ? "danger" : "warning"} />
                     </span>
                   )}
@@ -178,10 +175,7 @@ export function ProductosContenido({ filtroInicial }: { filtroInicial?: FiltroPr
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-slate-900">{producto.nombre}</p>
-                    <p className="text-xs text-slate-500">
-                      Código: {producto.sku}
-                      {producto.categoria ? ` · ${producto.categoria}` : ""}
-                    </p>
+                    {producto.categoria && <p className="text-xs text-slate-500">{producto.categoria}</p>}
                     {(vencido || porVencer) && (
                       <span
                         className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${

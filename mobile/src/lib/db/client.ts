@@ -50,7 +50,7 @@ const b = (valor: boolean): number => (valor ? 1 : 0);
 // ---------------------------------------------------------------------------
 
 type FilaProducto = {
-  id: number; sku: string; nombre: string; categoria: string | null; unidadMedida: string;
+  id: number; nombre: string; categoria: string | null; unidadMedida: string;
   factorConversion: number; precioCompra: number; precioVenta: number; perecedero: number;
   stockActual: number; stockMinimo: number; activo: number; createdAt: number; updatedAt: number;
 };
@@ -106,10 +106,10 @@ function mapGasto(f: FilaGasto): Gasto {
 
 type FilaConfiguracion = {
   id: number; nombreNegocio: string; moneda: string; simboloMoneda: string; pinHash: string | null;
-  diasAlertaVencimiento: number; updatedAt: number;
+  diasAlertaVencimiento: number; bloqueoActivado: number; huellaActivada: number; updatedAt: number;
 };
 function mapConfiguracion(f: FilaConfiguracion): Configuracion {
-  return { ...f, updatedAt: new Date(f.updatedAt) };
+  return { ...f, bloqueoActivado: !!f.bloqueoActivado, huellaActivada: !!f.huellaActivada, updatedAt: new Date(f.updatedAt) };
 }
 
 // ---------------------------------------------------------------------------
@@ -117,16 +117,12 @@ function mapConfiguracion(f: FilaConfiguracion): Configuracion {
 // ---------------------------------------------------------------------------
 
 const producto = {
-  async findMany(where?: { activo?: boolean; skuIn?: string[]; idIn?: number[] }): Promise<Producto[]> {
+  async findMany(where?: { activo?: boolean; idIn?: number[] }): Promise<Producto[]> {
     const condiciones: string[] = [];
     const params: unknown[] = [];
     if (where?.activo !== undefined) {
       condiciones.push("activo = ?");
       params.push(b(where.activo));
-    }
-    if (where?.skuIn && where.skuIn.length > 0) {
-      condiciones.push(`sku IN (${where.skuIn.map(() => "?").join(",")})`);
-      params.push(...where.skuIn);
     }
     if (where?.idIn) {
       if (where.idIn.length === 0) return [];
@@ -143,22 +139,25 @@ const producto = {
     return filas[0] ? mapProducto(filas[0]) : null;
   },
 
-  async findBySku(sku: string): Promise<Producto | null> {
-    const filas = await consultar<FilaProducto>("SELECT * FROM Producto WHERE sku = ?", [sku]);
+  // Reemplaza al viejo findBySku ahora que el producto ya no tiene código:
+  // la detección de duplicados en altas manuales/importación se hace por
+  // nombre (comparación sin distinguir mayúsculas).
+  async findByNombre(nombre: string): Promise<Producto | null> {
+    const filas = await consultar<FilaProducto>("SELECT * FROM Producto WHERE nombre = ? COLLATE NOCASE", [nombre]);
     return filas[0] ? mapProducto(filas[0]) : null;
   },
 
   async create(data: {
-    sku: string; nombre: string; categoria?: string | null; unidadMedida: string; factorConversion: number;
+    nombre: string; categoria?: string | null; unidadMedida: string; factorConversion: number;
     precioCompra: number; precioVenta: number; perecedero?: boolean; stockActual?: number; stockMinimo: number;
   }): Promise<Producto> {
     const ahora = Date.now();
     const { lastId } = await ejecutar(
       `INSERT INTO Producto
-        (sku, nombre, categoria, unidadMedida, factorConversion, precioCompra, precioVenta, perecedero, stockActual, stockMinimo, activo, createdAt, updatedAt)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        (nombre, categoria, unidadMedida, factorConversion, precioCompra, precioVenta, perecedero, stockActual, stockMinimo, activo, createdAt, updatedAt)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        data.sku, data.nombre, data.categoria ?? null, data.unidadMedida, data.factorConversion,
+        data.nombre, data.categoria ?? null, data.unidadMedida, data.factorConversion,
         data.precioCompra, data.precioVenta, b(data.perecedero ?? false), data.stockActual ?? 0,
         data.stockMinimo, 1, ahora, ahora,
       ],
@@ -205,10 +204,14 @@ const producto = {
 // ---------------------------------------------------------------------------
 
 const lote = {
-  async findVendibles(productoId: number, ahora: Date): Promise<Lote[]> {
+  // Incluye lotes ya vencidos a propósito (el dueño puede tener stock
+  // vencido físicamente en la tienda y necesita poder venderlo/darlo de
+  // baja): el orden FEFO ya hace que esos lotes salgan primero, por ser los
+  // que tienen la fecha de vencimiento más antigua.
+  async findVendibles(productoId: number, _ahora: Date): Promise<Lote[]> {
     const filas = await consultar<FilaLote>(
-      `SELECT * FROM Lote WHERE productoId = ? AND cantidad > 0 AND fechaVencimiento >= ? ORDER BY fechaVencimiento ASC`,
-      [productoId, ahora.getTime()],
+      `SELECT * FROM Lote WHERE productoId = ? AND cantidad > 0 ORDER BY fechaVencimiento ASC`,
+      [productoId],
     );
     return filas.map(mapLote);
   },
@@ -655,6 +658,7 @@ const configuracion = {
     id: number,
     data: Partial<{
       nombreNegocio: string; moneda: string; simboloMoneda: string; pinHash: string | null; diasAlertaVencimiento: number;
+      bloqueoActivado: boolean; huellaActivada: boolean;
     }>,
   ): Promise<void> {
     const campos: string[] = [];
@@ -664,6 +668,8 @@ const configuracion = {
     if (data.simboloMoneda !== undefined) { campos.push("simboloMoneda = ?"); params.push(data.simboloMoneda); }
     if (data.pinHash !== undefined) { campos.push("pinHash = ?"); params.push(data.pinHash); }
     if (data.diasAlertaVencimiento !== undefined) { campos.push("diasAlertaVencimiento = ?"); params.push(data.diasAlertaVencimiento); }
+    if (data.bloqueoActivado !== undefined) { campos.push("bloqueoActivado = ?"); params.push(b(data.bloqueoActivado)); }
+    if (data.huellaActivada !== undefined) { campos.push("huellaActivada = ?"); params.push(b(data.huellaActivada)); }
     campos.push("updatedAt = ?");
     params.push(Date.now());
     params.push(id);

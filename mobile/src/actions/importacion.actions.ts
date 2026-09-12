@@ -26,12 +26,12 @@ export async function previsualizarImportacion(
     return { error: "El archivo no tiene productos para importar" };
   }
 
-  const skusDb = await db.producto.findMany({ skuIn: filas.map((f) => f.sku).filter(Boolean) });
-  const skusExistentes = new Set(skusDb.map((p) => p.sku.toLowerCase()));
+  const productosDb = await db.producto.findMany();
+  const nombresExistentes = new Set(productosDb.map((p) => p.nombre.trim().toLowerCase()));
 
   const filasConValidacionDb = filas.map((fila) => {
-    if (fila.sku && skusExistentes.has(fila.sku.toLowerCase())) {
-      return { ...fila, errores: [...fila.errores, "Ya existe un producto con este código"] };
+    if (fila.nombre && nombresExistentes.has(fila.nombre.trim().toLowerCase())) {
+      return { ...fila, errores: [...fila.errores, "Ya existe un producto con este nombre"] };
     }
     return fila;
   });
@@ -41,7 +41,7 @@ export async function previsualizarImportacion(
 
 export type EstadoImportacion = {
   error?: string;
-  resultado?: { importados: number; errores: { numero: number; sku: string; mensaje: string }[] };
+  resultado?: { importados: number; errores: { numero: number; nombre: string; mensaje: string }[] };
 };
 
 export async function confirmarImportacion(
@@ -67,14 +67,14 @@ export async function confirmarImportacion(
     return { error: "No hay filas válidas para importar" };
   }
 
-  const errores: { numero: number; sku: string; mensaje: string }[] = [];
+  const errores: { numero: number; nombre: string; mensaje: string }[] = [];
   let importados = 0;
 
   for (const fila of filasValidas) {
     try {
-      const yaExiste = await db.producto.findBySku(fila.sku);
+      const yaExiste = await db.producto.findByNombre(fila.nombre);
       if (yaExiste) {
-        errores.push({ numero: fila.numero, sku: fila.sku, mensaje: "Ya existe un producto con este código" });
+        errores.push({ numero: fila.numero, nombre: fila.nombre, mensaje: "Ya existe un producto con este nombre" });
         continue;
       }
 
@@ -89,7 +89,6 @@ export async function confirmarImportacion(
 
       await db.$transaction(async (tx) => {
         const producto = await tx.producto.create({
-          sku: fila.sku,
           nombre: fila.nombre,
           categoria: fila.categoria,
           unidadMedida: fila.unidadMedida,
@@ -123,13 +122,13 @@ export async function confirmarImportacion(
           entidad: "Producto",
           entidadId: producto.id,
           accion: "CREAR",
-          detalle: { sku: fila.sku, nombre: fila.nombre, origen: "importacion" },
+          detalle: { nombre: fila.nombre, origen: "importacion" },
         });
       });
 
       importados += 1;
     } catch {
-      errores.push({ numero: fila.numero, sku: fila.sku, mensaje: "No se pudo guardar este producto" });
+      errores.push({ numero: fila.numero, nombre: fila.nombre, mensaje: "No se pudo guardar este producto" });
     }
   }
 

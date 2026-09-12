@@ -2,7 +2,6 @@ import ExcelJS from "exceljs";
 import { textoAFecha, fechaATexto } from "./dates";
 
 const COLUMNAS = [
-  { clave: "codigo", encabezado: "Código" },
   { clave: "nombre", encabezado: "Nombre" },
   { clave: "categoria", encabezado: "Categoría" },
   { clave: "unidad", encabezado: "Unidad (unidad, kg, litro...)" },
@@ -23,7 +22,6 @@ export async function generarPlantillaExcel(): Promise<ArrayBuffer> {
   hoja.getRow(1).font = { bold: true };
 
   hoja.addRow({
-    codigo: "0001",
     nombre: "Arroz 1kg",
     categoria: "Abarrotes",
     unidad: "unidad",
@@ -36,7 +34,6 @@ export async function generarPlantillaExcel(): Promise<ArrayBuffer> {
     cantidadLote: "",
   });
   hoja.addRow({
-    codigo: "0002",
     nombre: "Yogurt bebible 1L",
     categoria: "Lácteos",
     unidad: "unidad",
@@ -55,7 +52,6 @@ export async function generarPlantillaExcel(): Promise<ArrayBuffer> {
 
 export type FilaImportacion = {
   numero: number;
-  sku: string;
   nombre: string;
   categoria: string | null;
   unidadMedida: string;
@@ -104,29 +100,37 @@ export async function leerArchivoImportacion(
   if (!hoja) return { filas: [], error: "El archivo no tiene ninguna hoja" };
 
   const filas: FilaImportacion[] = [];
-  const skusVistos = new Set<string>();
+  const nombresVistos = new Set<string>();
 
   hoja.eachRow((fila, numeroFila) => {
     if (numeroFila === 1) return; // encabezado
 
     const valores = fila.values as unknown[]; // 1-based; valores[0] no se usa
 
-    const sku = normalizarTexto(valores[1]);
-    const nombre = normalizarTexto(valores[2]);
-    const categoria = normalizarTexto(valores[3]) || null;
-    const unidadTexto = normalizarTexto(valores[4]).toLowerCase();
-    const precioCompraNum = normalizarNumero(valores[5]);
-    const precioVentaNum = normalizarNumero(valores[6]);
-    const stockInicialNum = normalizarNumero(valores[7]);
-    const stockMinimoNum = normalizarNumero(valores[8]);
-    const perecederoTexto = normalizarTexto(valores[9]).toLowerCase();
-    const fechaVencimientoTexto = normalizarTexto(valores[10]) || null;
-    const cantidadLoteNum = normalizarNumero(valores[11]);
+    const nombre = normalizarTexto(valores[1]);
+    const categoria = normalizarTexto(valores[2]) || null;
+    const unidadTexto = normalizarTexto(valores[3]).toLowerCase();
+    const precioCompraNum = normalizarNumero(valores[4]);
+    const precioVentaNum = normalizarNumero(valores[5]);
+    const stockInicialNum = normalizarNumero(valores[6]);
+    const stockMinimoNum = normalizarNumero(valores[7]);
+    const perecederoTexto = normalizarTexto(valores[8]).toLowerCase();
+    const fechaVencimientoTexto = normalizarTexto(valores[9]) || null;
+    const cantidadLoteNum = normalizarNumero(valores[10]);
 
-    if (!sku && !nombre) return; // fila vacía: se ignora
+    const filaVacia =
+      !nombre &&
+      !categoria &&
+      precioCompraNum === null &&
+      precioVentaNum === null &&
+      stockInicialNum === null &&
+      stockMinimoNum === null &&
+      !perecederoTexto &&
+      !fechaVencimientoTexto &&
+      cantidadLoteNum === null;
+    if (filaVacia) return;
 
     const errores: string[] = [];
-    if (!sku) errores.push("Falta el código");
     if (!nombre) errores.push("Falta el nombre");
     if (precioCompraNum === null || precioCompraNum < 0) errores.push("Precio de compra inválido");
     if (precioVentaNum === null || precioVentaNum < 0) errores.push("Precio de venta inválido");
@@ -154,17 +158,16 @@ export async function leerArchivoImportacion(
       }
     }
 
-    if (sku) {
-      const skuNormalizado = sku.toLowerCase();
-      if (skusVistos.has(skuNormalizado)) {
-        errores.push("Código duplicado en el archivo");
+    if (nombre) {
+      const nombreNormalizado = nombre.toLowerCase();
+      if (nombresVistos.has(nombreNormalizado)) {
+        errores.push("Nombre duplicado en el archivo");
       }
-      skusVistos.add(skuNormalizado);
+      nombresVistos.add(nombreNormalizado);
     }
 
     filas.push({
       numero: numeroFila,
-      sku,
       nombre,
       categoria,
       unidadMedida,

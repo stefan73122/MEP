@@ -202,12 +202,6 @@ body {
   color: var(--mt-fg-1);
 }
 
-/* Encabezados y montos: el diseño de referencia los marca en itálica
-   bold (Archivo). font-semibold ya se usa en la app sólo para eso. */
-.font-semibold {
-  font-style: italic;
-}
-
 /* "bg-white" se usaba como fondo de tarjeta en el tema claro original;
    pasa a resolver contra la superficie de tarjeta del tema activo.
    Va sin @layer para tener prioridad sobre la utilidad de Tailwind. */
@@ -231,13 +225,21 @@ body {
   border-radius: var(--mt-radius-full);
 }
 
-/* Etiquetas de campo ("Nombre", "Teléfono", "CLIENTE"...): en el diseño
-   son mayúsculas, trackeadas e itálicas. Se aplica al elemento <label>
-   directamente, así que ninguna pantalla necesita cambiar sus clases. */
+/* Texto en negrita (montos, títulos, botones): en cursiva, igual que en
+   /diseno/Mi Tienda Mobile.dc.html. Va sin @layer para tener prioridad
+   sobre la utilidad de Tailwind. */
+.font-semibold {
+  font-style: italic;
+}
+
+/* Etiquetas de campo ("Nombre", "Teléfono", "CLIENTE"...): mayúsculas,
+   trackeadas y en cursiva, igual que el resto del texto en negrita. Se
+   aplica al elemento <label> directamente, así que ninguna pantalla
+   necesita cambiar sus clases. */
 label,
 legend {
-  font-style: italic;
   font-weight: 700;
+  font-style: italic;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
