@@ -1,0 +1,58 @@
+name: Compilar APK de Mi Tienda
+
+# Compila el .apk de depuración de la app móvil cada vez que cambia algo en
+# mobile/, o a pedido manual. No hace falta tener Android Studio instalado en
+# ninguna PC: todo corre en la nube. El .apk queda para descargar como
+# "artifact" de esta ejecución (pestaña Actions -> la corrida -> Artifacts).
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/build-apk.yml"
+  workflow_dispatch: {}
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Configurar Java (necesario para compilar Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Configurar el SDK de Android
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Exportar la app como sitio estático y sincronizar Capacitor
+        run: npm run cap:sync
+
+      - name: Compilar el APK de depuración
+        working-directory: mobile/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Subir el APK generado
+        uses: actions/upload-artifact@v4
+        with:
+          name: mi-tienda-debug-apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
