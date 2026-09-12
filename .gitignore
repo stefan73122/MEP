@@ -16,6 +16,9 @@
 .env
 .env*.local
 
+# diseño de referencia (no forma parte del código de la app)
+/diseno
+
 # varios
 .DS_Store
 *.pem

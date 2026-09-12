@@ -24,8 +24,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <NavBar />
 
         <div className="flex flex-1 flex-col">
-          <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-            <p className="text-sm font-semibold text-slate-900">{nombreNegocio}</p>
+          <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-500 shadow-[0_2px_0_rgba(0,0,0,0.5)]">
+              <span className="text-sm font-black italic tracking-tighter text-black">MT</span>
+            </div>
+            <p className="flex-1 truncate text-sm font-semibold text-slate-900">{nombreNegocio}</p>
             {hayPin && <LogoutButton />}
           </header>
 

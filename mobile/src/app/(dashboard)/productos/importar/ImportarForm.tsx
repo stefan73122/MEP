@@ -63,7 +63,7 @@ export function ImportarForm() {
         <button
           type="submit"
           disabled={cargandoPreview}
-          className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:bg-primary-700 disabled:opacity-60"
+          className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:brightness-110 disabled:opacity-60"
         >
           {cargandoPreview ? "Leyendo..." : "Ver vista previa"}
         </button>
@@ -116,7 +116,7 @@ export function ImportarForm() {
         <button
           type="submit"
           disabled={confirmando || filasValidas.length === 0}
-          className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:bg-primary-700 disabled:opacity-60"
+          className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:brightness-110 disabled:opacity-60"
         >
           {confirmando ? "Importando..." : `Confirmar importación (${filasValidas.length})`}
         </button>

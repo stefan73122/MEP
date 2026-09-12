@@ -13,6 +13,7 @@ import { crearClienteRapido } from "@/actions/clientes.actions";
 import { centavosATexto, textoACentavos } from "@/lib/money";
 import { textoAUnidadesMinimas } from "@/lib/stock";
 import type { FormaPago } from "@/lib/constants";
+import { IconAlertaTriangulo, IconBuscar } from "@/components/ui/icons";
 
 const ESTADO_INICIAL: EstadoVentaForm = {};
 
@@ -231,16 +232,19 @@ export function VentaForm({ clientes, simbolo }: Props) {
 
       <div className="relative">
         <label className="block text-sm font-medium text-slate-700">Buscar producto</label>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setMostrarNuevoProducto(false);
-          }}
-          placeholder="Código o nombre del producto"
-          className={`mt-1 ${clasesInput}`}
-        />
+        <div className="relative mt-1">
+          <IconBuscar className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-primary-500" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setMostrarNuevoProducto(false);
+            }}
+            placeholder="Código o nombre del producto"
+            className={`${clasesInput} pl-9`}
+          />
+        </div>
         {resultados.length > 0 && (
           <ul className="absolute z-10 mt-1 w-full space-y-1 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
             {resultados.map((producto) => (
@@ -307,7 +311,7 @@ export function VentaForm({ clientes, simbolo }: Props) {
                 type="button"
                 onClick={confirmarNuevoProducto}
                 disabled={creandoProducto}
-                className="flex-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60"
+                className="flex-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:brightness-110 disabled:opacity-60"
               >
                 {creandoProducto ? "Creando..." : "Crear y agregar"}
               </button>
@@ -453,7 +457,7 @@ export function VentaForm({ clientes, simbolo }: Props) {
                 type="button"
                 onClick={confirmarNuevoCliente}
                 disabled={creandoCliente}
-                className="flex-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60"
+                className="flex-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:brightness-110 disabled:opacity-60"
               >
                 {creandoCliente ? "Creando..." : "Crear cliente"}
               </button>
@@ -475,7 +479,7 @@ export function VentaForm({ clientes, simbolo }: Props) {
           {FORMAS.map((opcion) => (
             <label
               key={opcion.valor}
-              className={`flex cursor-pointer items-center justify-center rounded-lg border px-2 py-2 text-center text-xs font-medium ${
+              className={`flex -skew-x-[7deg] cursor-pointer items-center justify-center rounded-lg border px-2 py-2 text-center text-xs font-medium ${
                 formaPago === opcion.valor
                   ? "border-primary-500 bg-primary-50 text-primary-700"
                   : "border-slate-300 text-slate-600"
@@ -489,11 +493,15 @@ export function VentaForm({ clientes, simbolo }: Props) {
                 onChange={() => setFormaPago(opcion.valor)}
                 className="sr-only"
               />
-              {opcion.etiqueta}
+              <span className="skew-x-[7deg]">{opcion.etiqueta}</span>
             </label>
           ))}
         </div>
-        {faltaClienteParaCredito && <p className="mt-1 text-xs text-danger-600">Elegí un cliente para vender a crédito.</p>}
+        {faltaClienteParaCredito && (
+          <p className="mt-2 flex items-center gap-2 rounded-lg bg-danger-500/10 px-3 py-2 text-xs font-medium text-danger-600">
+            <IconAlertaTriangulo className="h-4 w-4" /> Elegí un cliente para vender a crédito.
+          </p>
+        )}
       </fieldset>
 
       <div>
@@ -551,7 +559,7 @@ export function VentaForm({ clientes, simbolo }: Props) {
         <button
           type="submit"
           disabled={!puedeEnviar}
-          className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:bg-primary-700 disabled:opacity-60"
+          className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:brightness-110 disabled:opacity-60"
         >
           {enviando ? "Registrando..." : "Confirmar venta"}
         </button>

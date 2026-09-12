@@ -72,7 +72,7 @@ function VentasContenido() {
         <h1 className="text-lg font-semibold text-slate-900">Ventas</h1>
         <Link
           href="/ventas/nueva"
-          className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700"
+          className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:brightness-110"
         >
           + Nueva venta
         </Link>

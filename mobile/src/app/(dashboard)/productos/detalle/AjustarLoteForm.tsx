@@ -72,7 +72,7 @@ export function AjustarLoteForm({
         <button
           type="submit"
           disabled={enviando}
-          className="flex-1 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-60"
+          className="flex-1 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:brightness-110 disabled:opacity-60"
         >
           {enviando ? "Guardando..." : "Confirmar ajuste"}
         </button>

@@ -8,6 +8,7 @@ import { centavosATexto } from "@/lib/money";
 import { fechaATexto } from "@/lib/dates";
 import { obtenerCuentasPorCobrar, type CuentaPorCobrar } from "@/lib/creditos";
 import type { Cliente } from "@/lib/db/types";
+import { IconAlertaTriangulo, IconBuscar } from "@/components/ui/icons";
 
 function ClientesContenido() {
   const searchParams = useSearchParams();
@@ -64,20 +65,23 @@ function ClientesContenido() {
         <h1 className="text-lg font-semibold text-slate-900">Clientes</h1>
         <Link
           href="/clientes/nuevo"
-          className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700"
+          className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:brightness-110"
         >
           + Nuevo cliente
         </Link>
       </div>
 
       <form action="/clientes" method="GET" className="flex gap-2">
-        <input
-          type="search"
-          name="q"
-          defaultValue={q ?? ""}
-          placeholder="Buscar por nombre"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-        />
+        <div className="relative w-full">
+          <IconBuscar className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-primary-500" />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Buscar por nombre"
+            className="w-full rounded-lg border border-slate-300 py-2.5 pr-3 pl-9 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          />
+        </div>
         {cxc === "1" && <input type="hidden" name="cxc" value="1" />}
         <button
           type="submit"
@@ -93,7 +97,7 @@ function ClientesContenido() {
           cxc === "1" ? "bg-danger-500 text-white" : "bg-red-50 text-danger-600 hover:bg-red-100"
         }`}
       >
-        💰 Cuentas por cobrar ({cuentasPorCobrar.length})
+        <IconAlertaTriangulo className="h-3.5 w-3.5" /> Cuentas por cobrar ({cuentasPorCobrar.length})
         {cxc === "1" ? " · mostrando solo estas" : ""}
       </Link>
 

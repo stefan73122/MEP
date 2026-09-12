@@ -78,7 +78,7 @@ export function ConfiguracionForm({ nombreNegocio, moneda, simboloMoneda, diasAl
       <button
         type="submit"
         disabled={enviando}
-        className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:bg-primary-700 disabled:opacity-60"
+        className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:brightness-110 disabled:opacity-60"
       >
         {enviando ? "Guardando..." : "Guardar cambios"}
       </button>

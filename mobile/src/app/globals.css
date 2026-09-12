@@ -1,28 +1,341 @@
 @import "tailwindcss";
 
-@theme {
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-500: #2563eb;
-  --color-primary-600: #1d4ed8;
-  --color-primary-700: #1e40af;
-  --color-danger-500: #dc2626;
-  --color-danger-600: #b91c1c;
-  --color-success-500: #16a34a;
-  --color-warning-500: #d97706;
+/* ============================================================
+   MI TIENDA — Design tokens
+   Extraídos de /diseno/Mi Tienda Mobile.dc.html (oscuro, base) y
+   /diseno/Mi Tienda Mobile Claro.dc.html (claro, referencia futura).
+
+   Capa 1 (abajo): variables semánticas "--mt-*". Son la fuente de
+   verdad de color/tipografía/radio/sombra y cambian según el tema.
+   Capa 2 (@theme): mapea esas variables a los tokens de color de
+   Tailwind (slate/primary/danger/success/warning) para que las
+   clases ya usadas en toda la app (bg-white, text-slate-500,
+   bg-primary-600, etc.) hereden el nuevo estilo sin tocar cada
+   pantalla.
+
+   Tema claro: ya queda preparado en `[data-theme="light"]`. Por
+   ahora nada activa ese atributo, así que la app se ve igual que
+   hoy (oscura). El día que se agregue un switch de tema basta con
+   poner `data-theme="light"` en <html> o <body>.
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  /* Tipografía */
+  --mt-font-sans: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Acento de marca (amarillo). El tinte suave (accent-soft/ring) queda
+     fijo en amarillo en los dos temas — en el diseño de referencia los
+     fondos translúcidos de acento no cambian de tono, sólo el texto
+     sólido que va encima (--mt-accent) pasa a ámbar en el tema claro. */
+  --mt-accent: #ffd524;
+  --mt-accent-soft: rgba(255, 213, 36, 0.14);
+  --mt-accent-ring: rgba(255, 213, 36, 0.28);
+
+  /* Botón principal — gris grafito fijo, igual en ambos temas */
+  --mt-btn-bg: #1c1c1f;
+  --mt-btn-bg-hover: #26262a;
+  --mt-btn-border: rgba(255, 255, 255, 0.16);
+  --mt-btn-fg: #ffffff;
+
+  /* Rojo sólido de insignias (Stock bajo, Vencido): fijo en ambos temas,
+     igual que el botón principal. */
+  --mt-danger-solid: #e63a2e;
+
+  /* Tintes translúcidos de estado: fijos en ambos temas (se apoyan en
+     la superficie de fondo para verse "suaves" sin redefinirse). */
+  --mt-danger-soft: rgba(230, 58, 46, 0.14);
+  --mt-danger-soft-strong: rgba(230, 58, 46, 0.22);
+  --mt-success-soft: rgba(87, 227, 106, 0.14);
+  --mt-warning-soft: rgba(217, 119, 6, 0.16);
+  --mt-warning-soft-strong: rgba(245, 158, 11, 0.24);
+
+  /* Superficies */
+  --mt-bg-app: #141416;
+  --mt-bg-surface: #212227; /* tarjetas */
+  --mt-bg-surface-alt: #18181b; /* paneles hundidos / secundarios */
+  --mt-bg-field: #141416; /* inputs, selects */
+  --mt-bg-muted: rgba(255, 255, 255, 0.06); /* chips, avatares, badges neutros */
+
+  /* Bordes */
+  --mt-border: rgba(255, 255, 255, 0.1);
+  --mt-border-soft: rgba(255, 255, 255, 0.07);
+  --mt-border-strong: rgba(255, 255, 255, 0.16);
+
+  /* Texto */
+  --mt-fg-1: #ffffff; /* títulos, montos principales */
+  --mt-fg-2: #d7d8dd; /* etiquetas de campo */
+  --mt-fg-3: #b3b5bc; /* texto secundario */
+  --mt-fg-4: #9a9ca4; /* meta / caption */
+  --mt-fg-5: #6b6d74; /* deshabilitado / placeholder */
+
+  /* Estados semánticos */
+  --mt-danger: #ff6b5e;
+  --mt-danger-solid: #e63a2e;
+  --mt-danger-soft: rgba(230, 58, 46, 0.14);
+  --mt-danger-soft-strong: rgba(230, 58, 46, 0.22);
+
+  --mt-success: #57e36a;
+  --mt-success-soft: rgba(87, 227, 106, 0.14);
+
+  --mt-warning: #f5b142;
+  --mt-warning-solid: #d97706;
+  --mt-warning-soft: rgba(217, 119, 6, 0.16);
+  --mt-warning-soft-strong: rgba(245, 158, 11, 0.24);
+
+  /* Radios (referencia visual de las tarjetas/botones del diseño) */
+  --mt-radius-sm: 8px;
+  --mt-radius: 12px;
+  --mt-radius-lg: 16px;
+  --mt-radius-full: 999px;
+
+  /* Tamaño y espaciado de campos (referencia del diseño, 44-46px) */
+  --mt-field-height: 46px;
+  --mt-field-padding-x: 13px;
+  --mt-field-gap: 11px;
+
+  /* Sombras */
+  --mt-shadow-card: 0 3px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --mt-shadow-btn: 0 3px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --mt-shadow-pop: 0 12px 28px rgba(0, 0, 0, 0.5);
 }
 
+/* Tema claro — preparado para activarse más adelante con
+   `<html data-theme="light">` (o en <body>), sin tocar el resto del CSS. */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --mt-accent: #a16207;
+
+  --mt-bg-app: #dcdee4;
+  --mt-bg-surface: #ffffff;
+  --mt-bg-surface-alt: #f1f2f6;
+  --mt-bg-field: #f1f2f6;
+  --mt-bg-muted: rgba(15, 23, 42, 0.05);
+
+  --mt-border: rgba(15, 23, 42, 0.12);
+  --mt-border-soft: rgba(15, 23, 42, 0.07);
+  --mt-border-strong: rgba(15, 23, 42, 0.16);
+
+  --mt-fg-1: #16171b;
+  --mt-fg-2: #33353c;
+  --mt-fg-3: #4b4d55;
+  --mt-fg-4: #5f626b;
+  --mt-fg-5: #8b8e97;
+
+  --mt-danger: #dc2626;
+
+  --mt-success: #15803d;
+
+  --mt-warning: #b45309;
+  --mt-warning-solid: #b45309;
+
+  --mt-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --mt-shadow-btn: 0 1px 2px rgba(15, 23, 42, 0.12);
+  --mt-shadow-pop: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+
+/* ============================================================
+   Puente hacia Tailwind: las clases ya usadas en toda la app
+   (bg-white, text-slate-500, bg-primary-600, bg-danger-500...)
+   pasan a resolverse contra las variables de arriba.
+   ============================================================ */
+@theme {
+  --font-sans: var(--mt-font-sans);
+
+  --radius-md: var(--mt-radius-sm);
+  --radius-lg: var(--mt-radius);
+  --radius-xl: var(--mt-radius-lg);
+  --radius-2xl: 20px;
+
+  --shadow-sm: var(--mt-shadow-card);
+  --shadow-lg: var(--mt-shadow-pop);
+
+  /* Neutros: reemplazan la escala "slate" usada en todas las pantallas */
+  --color-slate-50: var(--mt-bg-surface-alt);
+  --color-slate-100: var(--mt-bg-muted);
+  --color-slate-200: var(--mt-border);
+  --color-slate-300: var(--mt-border-strong);
+  --color-slate-400: var(--mt-fg-5);
+  --color-slate-500: var(--mt-fg-4);
+  --color-slate-600: var(--mt-fg-3);
+  --color-slate-700: var(--mt-fg-2);
+  --color-slate-900: var(--mt-fg-1);
+
+  /* "primary": 500/100/50 quedan para el acento de marca (foco, bordes,
+     chips seleccionados); 600/700 son el botón de acción (fijo, gris
+     grafito con texto blanco, igual que "Confirmar venta" del diseño) */
+  --color-primary-50: var(--mt-accent-soft);
+  --color-primary-100: var(--mt-accent-ring);
+  --color-primary-500: var(--mt-accent);
+  --color-primary-600: var(--mt-btn-bg);
+  --color-primary-700: var(--mt-accent);
+
+  --color-danger-500: var(--mt-danger-solid);
+  --color-danger-600: var(--mt-danger);
+  --color-red-50: var(--mt-danger-soft);
+  --color-red-100: var(--mt-danger-soft-strong);
+
+  --color-success-500: var(--mt-success);
+  --color-green-50: var(--mt-success-soft);
+
+  --color-warning-500: var(--mt-warning);
+  --color-orange-50: var(--mt-warning-soft);
+  --color-orange-100: var(--mt-warning-soft-strong);
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
 html {
   font-size: 16px;
 }
 
 body {
-  background-color: #f8fafc;
-  color: #0f172a;
+  background-color: var(--mt-bg-app);
+  color: var(--mt-fg-1);
+}
+
+/* Encabezados y montos: el diseño de referencia los marca en itálica
+   bold (Archivo). font-semibold ya se usa en la app sólo para eso. */
+.font-semibold {
+  font-style: italic;
+}
+
+/* "bg-white" se usaba como fondo de tarjeta en el tema claro original;
+   pasa a resolver contra la superficie de tarjeta del tema activo.
+   Va sin @layer para tener prioridad sobre la utilidad de Tailwind. */
+.bg-white {
+  background-color: var(--mt-bg-surface);
+}
+
+/* El botón de acción principal (bg-primary-600) toma el trato del
+   diseño: borde sutil y sombra "elevada". Los estados hover de estos
+   botones usan la utilidad hover:brightness-110 (aclara el mismo color
+   en vez de cambiar a un tono de acento distinto). */
+.bg-primary-600 {
+  border: 1px solid var(--mt-btn-border);
+  box-shadow: var(--mt-shadow-btn);
+}
+
+/* Sólo los BOTONES en bg-primary-600 son píldora (siempre lo combinan con
+   rounded-lg). La tarjeta "Hoy" de Reportes usa bg-primary-600 + rounded-xl
+   y debe quedar como tarjeta rectangular, así que no matchea esta regla. */
+.bg-primary-600.rounded-lg {
+  border-radius: var(--mt-radius-full);
+}
+
+/* Etiquetas de campo ("Nombre", "Teléfono", "CLIENTE"...): en el diseño
+   son mayúsculas, trackeadas e itálicas. Se aplica al elemento <label>
+   directamente, así que ninguna pantalla necesita cambiar sus clases. */
+label,
+legend {
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Encabezados de sección dentro de tarjetas ("Negocio", "PIN de acceso"...):
+   en el diseño siempre van en mayúsculas trackeadas (h1 queda afuera a
+   propósito porque a veces muestra datos, p. ej. el nombre de un cliente). */
+h2 {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 input,
 select,
 textarea {
   font-size: 16px;
+  background-color: var(--mt-bg-field);
+  color: var(--mt-fg-1);
+  border-color: var(--mt-border-strong);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--mt-fg-5);
+}
+
+/* Banderín de alerta animado (productos vencidos / por vencer),
+   igual que en /diseno/Mi Tienda Mobile.dc.html */
+@keyframes mt-alerta-bandera {
+  0%,
+  62%,
+  100% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 0 0 rgba(230, 58, 46, 0));
+  }
+  70% {
+    transform: translateY(-3px) scale(1.18);
+    filter: drop-shadow(0 0 7px rgba(255, 70, 55, 0.95));
+  }
+  78% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 0 3px rgba(255, 70, 55, 0.5));
+  }
+  86% {
+    transform: translateY(-2px) scale(1.1);
+    filter: drop-shadow(0 0 6px rgba(255, 70, 55, 0.8));
+  }
+  94% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 0 0 rgba(230, 58, 46, 0));
+  }
+}
+
+/* Misma animación, pero para el banderín que va dentro de una pestaña
+   ya inclinada (-skewX(8deg)) del nav inferior: mantiene el skew fijo
+   mientras rebota y brilla. */
+@keyframes mt-alerta-bandera-nav {
+  0%,
+  62%,
+  100% {
+    transform: skewX(8deg) translateY(0) scale(1);
+    filter: drop-shadow(0 0 0 rgba(230, 58, 46, 0));
+  }
+  70% {
+    transform: skewX(8deg) translateY(-3px) scale(1.18);
+    filter: drop-shadow(0 0 7px rgba(255, 70, 55, 0.95));
+  }
+  78% {
+    transform: skewX(8deg) translateY(0) scale(1);
+    filter: drop-shadow(0 0 3px rgba(255, 70, 55, 0.5));
+  }
+  86% {
+    transform: skewX(8deg) translateY(-2px) scale(1.1);
+    filter: drop-shadow(0 0 6px rgba(255, 70, 55, 0.8));
+  }
+  94% {
+    transform: skewX(8deg) translateY(0) scale(1);
+    filter: drop-shadow(0 0 0 rgba(230, 58, 46, 0));
+  }
+}
+
+@keyframes mt-alerta-bandera-ambar {
+  0%,
+  62%,
+  100% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 0 0 rgba(217, 119, 6, 0));
+  }
+  70% {
+    transform: translateY(-3px) scale(1.18);
+    filter: drop-shadow(0 0 7px rgba(245, 177, 66, 0.95));
+  }
+  78% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 0 3px rgba(245, 177, 66, 0.5));
+  }
+  86% {
+    transform: translateY(-2px) scale(1.1);
+    filter: drop-shadow(0 0 6px rgba(245, 177, 66, 0.8));
+  }
+  94% {
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 0 0 rgba(217, 119, 6, 0));
+  }
 }

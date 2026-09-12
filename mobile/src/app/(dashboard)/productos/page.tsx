@@ -9,6 +9,7 @@ import { unidadesMinimasATexto } from "@/lib/stock";
 import { DIAS_ALERTA_VENCIMIENTO_DEFECTO } from "@/lib/constants";
 import { obtenerLotesPorVencer, obtenerLotesVencidos } from "@/lib/lotes";
 import type { Producto } from "@/lib/db/types";
+import { IconAlertaBandera, IconAlertaTriangulo, IconBuscar, IconProductos, IconReloj } from "@/components/ui/icons";
 
 function construirUrl(base: string, params: Record<string, string | undefined>) {
   const busqueda = new URLSearchParams();
@@ -94,7 +95,7 @@ function ProductosContenido() {
           </Link>
           <Link
             href="/productos/nuevo"
-            className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700"
+            className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:brightness-110"
           >
             + Nuevo
           </Link>
@@ -102,13 +103,16 @@ function ProductosContenido() {
       </div>
 
       <form action="/productos" method="GET" className="flex gap-2">
-        <input
-          type="search"
-          name="q"
-          defaultValue={q ?? ""}
-          placeholder="Buscar por nombre o código"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-        />
+        <div className="relative w-full">
+          <IconBuscar className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-primary-500" />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Buscar por nombre o código"
+            className="w-full rounded-lg border border-slate-300 py-2.5 pr-3 pl-9 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          />
+        </div>
         {bajo === "1" && <input type="hidden" name="bajo" value="1" />}
         <button
           type="submit"
@@ -125,7 +129,7 @@ function ProductosContenido() {
             bajo === "1" ? "bg-danger-500 text-white" : "bg-red-50 text-danger-600 hover:bg-red-100"
           }`}
         >
-          ⚠ Stock bajo ({totalBajoStock})
+          <IconAlertaTriangulo className="h-3.5 w-3.5" /> Stock bajo ({totalBajoStock})
         </Link>
         {totalVencidos > 0 && (
           <Link
@@ -134,7 +138,7 @@ function ProductosContenido() {
               vencimiento === "vencido" ? "bg-danger-500 text-white" : "bg-red-50 text-danger-600 hover:bg-red-100"
             }`}
           >
-            ⛔ Vencidos ({totalVencidos})
+            <IconAlertaTriangulo className="h-3.5 w-3.5" /> Vencidos ({totalVencidos})
           </Link>
         )}
         {totalPorVencer > 0 && (
@@ -144,7 +148,7 @@ function ProductosContenido() {
               vencimiento === "porVencer" ? "bg-warning-500 text-white" : "bg-orange-50 text-warning-500 hover:bg-orange-100"
             }`}
           >
-            ⏳ Por vencer ({totalPorVencer})
+            <IconReloj className="h-3.5 w-3.5" /> Por vencer ({totalPorVencer})
           </Link>
         )}
       </div>
@@ -161,9 +165,29 @@ function ProductosContenido() {
               <li key={producto.id}>
                 <Link
                   href={`/productos/detalle?id=${producto.id}`}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 hover:border-primary-300"
+                  className={`relative flex items-center gap-3 rounded-xl border bg-white p-3 hover:border-primary-300 ${
+                    vencido ? "border-danger-600/40" : porVencer ? "border-warning-500/40" : "border-slate-200"
+                  }`}
                 >
-                  <div className="min-w-0">
+                  {(vencido || porVencer) && (
+                    <span className="absolute -top-2 left-1 z-10">
+                      <IconAlertaBandera variante={vencido ? "danger" : "warning"} />
+                    </span>
+                  )}
+                  <div
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border ${
+                      vencido
+                        ? "border-danger-600/35 bg-danger-500/10"
+                        : porVencer
+                          ? "border-warning-500/35 bg-warning-500/15"
+                          : "border-slate-200 bg-slate-50"
+                    }`}
+                  >
+                    <IconProductos
+                      className={vencido ? "text-danger-600" : porVencer ? "text-warning-500" : "text-slate-500"}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-slate-900">{producto.nombre}</p>
                     <p className="text-xs text-slate-500">
                       Código: {producto.sku}

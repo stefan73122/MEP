@@ -27,6 +27,7 @@ import { filasACsv } from "@/lib/csv";
 import { guardarTexto } from "@/lib/archivos";
 import type { Gasto, Venta } from "@/lib/db/types";
 import { GastoForm } from "./GastoForm";
+import { IconAlertaTriangulo, IconReloj } from "@/components/ui/icons";
 import { BorrarGastoButton } from "./BorrarGastoButton";
 
 function construirQuery(params: Record<string, string | undefined>): string {
@@ -161,7 +162,8 @@ function ReportesContenido() {
               href="/productos?vencimiento=vencido"
               className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-danger-600 hover:bg-red-100"
             >
-              ⛔ {productosVencidos} producto{productosVencidos === 1 ? "" : "s"} con lotes vencidos
+              <IconAlertaTriangulo className="h-3.5 w-3.5" /> {productosVencidos} producto
+              {productosVencidos === 1 ? "" : "s"} con lotes vencidos
             </Link>
           )}
           {productosPorVencer > 0 && (
@@ -169,7 +171,7 @@ function ReportesContenido() {
               href="/productos?vencimiento=porVencer"
               className="inline-flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-medium text-warning-500 hover:bg-orange-100"
             >
-              ⏳ {productosPorVencer} por vencer
+              <IconReloj className="h-3.5 w-3.5" /> {productosPorVencer} por vencer
             </Link>
           )}
         </div>
@@ -178,20 +180,20 @@ function ReportesContenido() {
       <div className="rounded-xl bg-primary-600 p-4 text-white">
         <h2 className="mb-2 text-sm font-semibold">Hoy</h2>
         <p className="text-2xl font-semibold">{centavosATexto(resumenHoy.total, simbolo)}</p>
-        <p className="text-sm text-primary-100">
+        <p className="text-sm text-slate-500">
           {resumenHoy.cantidadVentas} venta{resumenHoy.cantidadVentas === 1 ? "" : "s"}
         </p>
         <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
           <div className="rounded-lg bg-white/10 p-2">
-            <p className="text-primary-100">Efectivo</p>
+            <p className="text-slate-500">Efectivo</p>
             <p className="font-semibold">{centavosATexto(resumenHoy.efectivo, simbolo)}</p>
           </div>
           <div className="rounded-lg bg-white/10 p-2">
-            <p className="text-primary-100">Transf./QR</p>
+            <p className="text-slate-500">Transf./QR</p>
             <p className="font-semibold">{centavosATexto(resumenHoy.transferenciaQr, simbolo)}</p>
           </div>
           <div className="rounded-lg bg-white/10 p-2">
-            <p className="text-primary-100">Fiado</p>
+            <p className="text-slate-500">Fiado</p>
             <p className="font-semibold">{centavosATexto(resumenHoy.credito, simbolo)}</p>
           </div>
         </div>

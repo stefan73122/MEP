@@ -15,6 +15,7 @@ import { EstadoProductoToggle } from "./EstadoProductoToggle";
 import { EntradaLoteForm } from "./EntradaLoteForm";
 import { SalidaLoteForm } from "./SalidaLoteForm";
 import { AjustarLoteForm } from "./AjustarLoteForm";
+import { IconAlertaTriangulo } from "@/components/ui/icons";
 
 const ETIQUETAS_TIPO_VENTA: Record<string, string> = {
   kg: "Por peso (kg)",
@@ -113,9 +114,9 @@ function ProductoDetalleContenido() {
         <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
           <div className="rounded-lg bg-slate-50 p-2">
             <p className="text-xs text-slate-500">Stock actual</p>
-            <p className={`font-semibold ${bajoStock ? "text-danger-600" : "text-slate-900"}`}>
+            <p className={`flex items-center gap-1 font-semibold ${bajoStock ? "text-danger-600" : "text-slate-900"}`}>
               {unidadesMinimasATexto(producto.stockActual, producto.factorConversion)} {producto.unidadMedida}
-              {bajoStock && " ⚠"}
+              {bajoStock && <IconAlertaTriangulo className="h-3.5 w-3.5" />}
             </p>
           </div>
           <div className="rounded-lg bg-slate-50 p-2">
