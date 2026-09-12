@@ -191,6 +191,10 @@
    ============================================================ */
 html {
   font-size: 16px;
+  /* Evita el flash gris por defecto del WebView de Android al tocar
+     botones/enlaces, y el retraso de ~300ms de doble-tap-para-zoom. */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 body {

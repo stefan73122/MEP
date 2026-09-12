@@ -99,7 +99,7 @@ export function NavBar() {
       </nav>
 
       {/* Celular: barra inferior de pestañas */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex items-stretch gap-0.5 border-t border-slate-200 bg-white px-2 pt-1.5 pb-2 md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-10 flex items-stretch gap-0.5 border-t border-slate-200 bg-white px-2 pt-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:hidden">
         {ENLACES.map(({ href, etiqueta, Icono, alerta }) => {
           const activo = esEnlaceActivo(pathname, href);
           const conAlerta = alerta ? alertas[alerta] : false;
