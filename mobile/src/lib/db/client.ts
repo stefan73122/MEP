@@ -189,6 +189,15 @@ const producto = {
     params.push(id);
     await ejecutar(`UPDATE Producto SET ${campos.join(", ")} WHERE id = ?`, params);
   },
+
+  // Para el tablero: sólo el conteo, agregado en SQLite (no trae los productos
+  // a memoria para contarlos en JS) — tiene que ser rápido con miles de filas.
+  async contarStockBajo(): Promise<number> {
+    const filas = await consultar<{ cantidad: number }>(
+      "SELECT COUNT(*) as cantidad FROM Producto WHERE activo = 1 AND stockActual < stockMinimo",
+    );
+    return filas[0]?.cantidad ?? 0;
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -260,6 +269,31 @@ const lote = {
 
   async update(id: number, data: { cantidad: number }): Promise<void> {
     await ejecutar("UPDATE Lote SET cantidad = ? WHERE id = ?", [data.cantidad, id]);
+  },
+
+  // Para el nav: cuenta productos distintos con algún lote ya vencido,
+  // agregado en SQLite (sin traer los lotes).
+  async contarProductosVencidos(ahora: Date): Promise<number> {
+    const filas = await consultar<{ cantidad: number }>(
+      `SELECT COUNT(DISTINCT l.productoId) as cantidad
+       FROM Lote l JOIN Producto p ON p.id = l.productoId
+       WHERE l.cantidad > 0 AND l.fechaVencimiento < ? AND p.activo = 1`,
+      [ahora.getTime()],
+    );
+    return filas[0]?.cantidad ?? 0;
+  },
+
+  // Para el tablero: cuenta productos distintos con algún lote por vencer
+  // dentro del plazo configurado, agregado en SQLite (sin traer los lotes).
+  async contarProductosPorVencer(ahora: Date, diasAlerta: number): Promise<number> {
+    const limite = ahora.getTime() + diasAlerta * 24 * 60 * 60 * 1000;
+    const filas = await consultar<{ cantidad: number }>(
+      `SELECT COUNT(DISTINCT l.productoId) as cantidad
+       FROM Lote l JOIN Producto p ON p.id = l.productoId
+       WHERE l.cantidad > 0 AND l.fechaVencimiento >= ? AND l.fechaVencimiento <= ? AND p.activo = 1`,
+      [ahora.getTime(), limite],
+    );
+    return filas[0]?.cantidad ?? 0;
   },
 };
 
@@ -461,6 +495,38 @@ const venta = {
     await ejecutar("UPDATE Venta SET estado = ?, motivoAnulacion = ?, updatedAt = ? WHERE id = ?", [
       data.estado, data.motivoAnulacion ?? null, Date.now(), id,
     ]);
+  },
+
+  // Para el tablero: total y cantidad de ventas del día agrupados por forma de
+  // pago en una sola consulta agregada (GROUP BY), sin traer cada venta.
+  async resumenPorFormaPagoEnRango(
+    desde: Date,
+    hasta: Date,
+  ): Promise<{ formaPago: FormaPago; cantidad: number; total: number }[]> {
+    const filas = await consultar<{ formaPago: FormaPago; cantidad: number; total: number | null }>(
+      `SELECT formaPago, COUNT(*) as cantidad, COALESCE(SUM(total), 0) as total
+       FROM Venta
+       WHERE estado = 'COMPLETADA' AND fecha >= ? AND fecha <= ?
+       GROUP BY formaPago`,
+      [desde.getTime(), hasta.getTime()],
+    );
+    return filas.map((f) => ({ formaPago: f.formaPago, cantidad: f.cantidad, total: f.total ?? 0 }));
+  },
+
+  // Para el tablero: saldo de fiado pendiente sumando TODOS los clientes, en
+  // una sola consulta agregada (total vendido a crédito menos lo ya pagado).
+  async saldoPendienteTotalCredito(): Promise<number> {
+    const filas = await consultar<{ saldo: number | null }>(
+      `SELECT
+         COALESCE((SELECT SUM(total) FROM Venta WHERE formaPago = 'CREDITO' AND estado = 'COMPLETADA'), 0)
+         - COALESCE(
+             (SELECT SUM(pv.montoAplicado)
+              FROM PagoVenta pv JOIN Venta v ON v.id = pv.ventaId
+              WHERE v.formaPago = 'CREDITO' AND v.estado = 'COMPLETADA'),
+             0
+           ) as saldo`,
+    );
+    return filas[0]?.saldo ?? 0;
   },
 };
 

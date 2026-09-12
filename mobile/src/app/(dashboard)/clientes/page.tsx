@@ -10,10 +10,14 @@ import { obtenerCuentasPorCobrar, type CuentaPorCobrar } from "@/lib/creditos";
 import type { Cliente } from "@/lib/db/types";
 import { IconAlertaTriangulo, IconBuscar } from "@/components/ui/icons";
 
-function ClientesContenido() {
-  const searchParams = useSearchParams();
-  const q = searchParams.get("q") ?? undefined;
-  const cxc = searchParams.get("cxc") ?? undefined;
+export type FiltroClientes = { q?: string; cxc?: boolean };
+
+// Contenido real de la pantalla: estado local, nada de useSearchParams. Así
+// el carrusel de swipe puede montarla como vecina sin pelear por la URL
+// (que solo existe una vez para toda la app).
+export function ClientesContenido({ filtroInicial }: { filtroInicial?: FiltroClientes }) {
+  const [q, setQ] = useState(filtroInicial?.q ?? "");
+  const [cxc, setCxc] = useState(filtroInicial?.cxc ?? false);
 
   const [cargando, setCargando] = useState(true);
   const [simbolo, setSimbolo] = useState("Bs");
@@ -49,7 +53,7 @@ function ClientesContenido() {
     const qNormalizado = q.trim().toLowerCase();
     clientes = clientes.filter((c) => c.nombre.toLowerCase().includes(qNormalizado));
   }
-  if (cxc === "1") {
+  if (cxc) {
     clientes = clientes.filter((c) => saldosPorCliente.has(c.id));
     clientes.sort(
       (a, b) =>
@@ -71,35 +75,27 @@ function ClientesContenido() {
         </Link>
       </div>
 
-      <form action="/clientes" method="GET" className="flex gap-2">
-        <div className="relative w-full">
-          <IconBuscar className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-primary-500" />
-          <input
-            type="search"
-            name="q"
-            defaultValue={q ?? ""}
-            placeholder="Buscar por nombre"
-            className="w-full rounded-lg border border-slate-300 py-2.5 pr-3 pl-9 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-          />
-        </div>
-        {cxc === "1" && <input type="hidden" name="cxc" value="1" />}
-        <button
-          type="submit"
-          className="shrink-0 rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
-        >
-          Buscar
-        </button>
-      </form>
+      <div className="relative w-full">
+        <IconBuscar className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-primary-500" />
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Buscar por nombre"
+          className="w-full rounded-lg border border-slate-300 py-2.5 pr-3 pl-9 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+        />
+      </div>
 
-      <Link
-        href={cxc === "1" ? "/clientes" : `/clientes?cxc=1`}
+      <button
+        type="button"
+        onClick={() => setCxc((v) => !v)}
         className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${
-          cxc === "1" ? "bg-danger-500 text-white" : "bg-red-50 text-danger-600 hover:bg-red-100"
+          cxc ? "bg-danger-500 text-white" : "bg-red-50 text-danger-600 hover:bg-red-100"
         }`}
       >
         <IconAlertaTriangulo className="h-3.5 w-3.5" /> Cuentas por cobrar ({cuentasPorCobrar.length})
-        {cxc === "1" ? " · mostrando solo estas" : ""}
-      </Link>
+        {cxc ? " · mostrando solo estas" : ""}
+      </button>
 
       {clientes.length === 0 ? (
         <p className="rounded-lg bg-white p-4 text-sm text-slate-500">No se encontraron clientes.</p>
@@ -133,10 +129,20 @@ function ClientesContenido() {
   );
 }
 
+// Punto de entrada por URL real (escritorio, o refresh directo de /clientes).
+function ClientesDesdeUrl() {
+  const searchParams = useSearchParams();
+  const filtroInicial: FiltroClientes = {
+    q: searchParams.get("q") ?? undefined,
+    cxc: searchParams.get("cxc") === "1",
+  };
+  return <ClientesContenido filtroInicial={filtroInicial} />;
+}
+
 export default function ClientesPage() {
   return (
     <Suspense fallback={<p className="text-sm text-slate-500">Cargando...</p>}>
-      <ClientesContenido />
+      <ClientesDesdeUrl />
     </Suspense>
   );
 }

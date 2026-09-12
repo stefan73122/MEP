@@ -3,7 +3,7 @@ import { requireAcceso } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/audit";
 import { textoACentavos } from "@/lib/money";
 import { textoAUnidadesMinimas } from "@/lib/stock";
-import { textoAFecha } from "@/lib/dates";
+import { inicioDelDia, textoAFecha } from "@/lib/dates";
 import { ErrorRestriccionUnica } from "@/lib/db/types";
 import { actualizarProductoSchema, crearProductoSchema } from "@/validations/producto.schema";
 import type { TipoVenta } from "@/lib/constants";
@@ -62,6 +62,9 @@ export async function crearProducto(
       fechaVencimientoInicial = textoAFecha(datos.fechaVencimientoInicialTexto);
     } catch (error) {
       return { error: (error as Error).message };
+    }
+    if (fechaVencimientoInicial < inicioDelDia(new Date())) {
+      return { error: "La fecha de vencimiento no puede ser anterior a hoy" };
     }
   }
 

@@ -1,11 +1,10 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { db } from "@/lib/db/client";
 import { centavosATexto } from "@/lib/money";
-import { fechaATexto, fechaHoraATexto } from "@/lib/dates";
+import { fechaATexto, fechaHoraATexto, finDelDia, inicioDelDia, textoAFecha } from "@/lib/dates";
 import { unidadesMinimasATexto } from "@/lib/stock";
 import { DIAS_ALERTA_VENCIMIENTO_DEFECTO } from "@/lib/constants";
 import { obtenerLotesPorVencer, obtenerLotesVencidos } from "@/lib/lotes";
@@ -29,22 +28,21 @@ import type { Gasto, Venta } from "@/lib/db/types";
 import { GastoForm } from "./GastoForm";
 import { IconAlertaTriangulo, IconReloj } from "@/components/ui/icons";
 import { BorrarGastoButton } from "./BorrarGastoButton";
+import { CampoFecha } from "@/components/forms/CampoFecha";
+import { useIrAPrincipal } from "@/components/pager/useIrAPrincipal";
 
-function construirQuery(params: Record<string, string | undefined>): string {
-  const busqueda = new URLSearchParams();
-  for (const [clave, valor] of Object.entries(params)) {
-    if (valor) busqueda.set(clave, valor);
-  }
-  return busqueda.toString();
-}
+export type FiltroReportes = { desde?: Date; hasta?: Date; agruparPorMes?: boolean };
 
-function ReportesContenido() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const desdeTexto = searchParams.get("desde") ?? undefined;
-  const hastaTexto = searchParams.get("hasta") ?? undefined;
-  const agrupar = searchParams.get("agrupar") ?? undefined;
-  const agruparPorMes = agrupar === "mes";
+// Contenido real de la pantalla: estado local, nada de useSearchParams. Así
+// el carrusel de swipe puede montarla como vecina sin pelear por la URL
+// (que solo existe una vez para toda la app).
+export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroReportes }) {
+  const irA = useIrAPrincipal();
+
+  const rangoDefecto = resolverRangoReporte(undefined, undefined);
+  const [desde, setDesde] = useState<Date>(() => filtroInicial?.desde ?? rangoDefecto.desde);
+  const [hasta, setHasta] = useState<Date>(() => filtroInicial?.hasta ?? rangoDefecto.hasta);
+  const [agruparPorMes, setAgruparPorMes] = useState(filtroInicial?.agruparPorMes ?? false);
 
   const [cargando, setCargando] = useState(true);
   const [simbolo, setSimbolo] = useState("Bs");
@@ -63,7 +61,8 @@ function ReportesContenido() {
   useEffect(() => {
     let cancelado = false;
     async function cargar() {
-      const { desde: rangoDesde, hasta: rangoHasta } = resolverRangoReporte(desdeTexto, hastaTexto);
+      const rangoDesde = inicioDelDia(desde);
+      const rangoHasta = finDelDia(hasta);
 
       const [configuracion, resumen, ventasRango, masVendidos, gananciaCalc, gastosRango] = await Promise.all([
         db.configuracion.findFirst(),
@@ -95,7 +94,7 @@ function ReportesContenido() {
     return () => {
       cancelado = true;
     };
-  }, [desdeTexto, hastaTexto, recargarClave]);
+  }, [desde, hasta, recargarClave]);
 
   if (cargando || !resumenHoy || !rango) return <p className="text-sm text-slate-500">Cargando...</p>;
 
@@ -103,7 +102,6 @@ function ReportesContenido() {
   const gananciaReal = ganancia.ganancia - totalGastos;
   const gruposVentas: GrupoVentas[] = agruparPorMes ? agruparVentasPorMes(ventas) : agruparVentasPorDia(ventas);
   const totalVentas = ventas.reduce((acc, v) => acc + v.total, 0);
-  const queryActual = { desde: fechaATexto(rango.desde), hasta: fechaATexto(rango.hasta), agrupar };
 
   async function exportarVentasCsv() {
     const filas = ventas.map((venta) => [
@@ -158,21 +156,23 @@ function ReportesContenido() {
       {(productosVencidos > 0 || productosPorVencer > 0) && (
         <div className="flex flex-wrap gap-2">
           {productosVencidos > 0 && (
-            <Link
-              href="/productos?vencimiento=vencido"
+            <button
+              type="button"
+              onClick={() => irA("/productos", { vencimiento: "vencido" })}
               className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-danger-600 hover:bg-red-100"
             >
               <IconAlertaTriangulo className="h-3.5 w-3.5" /> {productosVencidos} producto
               {productosVencidos === 1 ? "" : "s"} con lotes vencidos
-            </Link>
+            </button>
           )}
           {productosPorVencer > 0 && (
-            <Link
-              href="/productos?vencimiento=porVencer"
+            <button
+              type="button"
+              onClick={() => irA("/productos", { vencimiento: "porVencer" })}
               className="inline-flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1.5 text-xs font-medium text-warning-500 hover:bg-orange-100"
             >
               <IconReloj className="h-3.5 w-3.5" /> {productosPorVencer} por vencer
-            </Link>
+            </button>
           )}
         </div>
       )}
@@ -199,37 +199,10 @@ function ReportesContenido() {
         </div>
       </div>
 
-      <form action="/reportes" method="GET" className="grid grid-cols-2 gap-2 rounded-xl bg-white p-3">
-        <div>
-          <label className="block text-xs font-medium text-slate-500">Desde</label>
-          <input
-            type="text"
-            name="desde"
-            defaultValue={fechaATexto(rango.desde)}
-            placeholder="dd/mm/aaaa"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500">Hasta</label>
-          <input
-            type="text"
-            name="hasta"
-            defaultValue={fechaATexto(rango.hasta)}
-            placeholder="dd/mm/aaaa"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </div>
-        {agrupar && <input type="hidden" name="agrupar" value={agrupar} />}
-        <div className="col-span-2">
-          <button
-            type="submit"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
-          >
-            Filtrar
-          </button>
-        </div>
-      </form>
+      <div className="grid grid-cols-2 gap-2 rounded-xl bg-white p-3">
+        <CampoFecha label="Desde" value={desde} onChange={setDesde} />
+        <CampoFecha label="Hasta" value={hasta} onChange={setHasta} />
+      </div>
 
       <div className="rounded-xl bg-white p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
@@ -242,14 +215,14 @@ function ReportesContenido() {
         <div className="mb-3 flex gap-2 text-xs">
           <button
             type="button"
-            onClick={() => router.push(`/reportes?${construirQuery({ ...queryActual, agrupar: undefined })}`)}
+            onClick={() => setAgruparPorMes(false)}
             className={`rounded-full px-3 py-1 font-medium ${!agruparPorMes ? "bg-primary-100 text-primary-700" : "bg-slate-100 text-slate-600"}`}
           >
             Por día
           </button>
           <button
             type="button"
-            onClick={() => router.push(`/reportes?${construirQuery({ ...queryActual, agrupar: "mes" })}`)}
+            onClick={() => setAgruparPorMes(true)}
             className={`rounded-full px-3 py-1 font-medium ${agruparPorMes ? "bg-primary-100 text-primary-700" : "bg-slate-100 text-slate-600"}`}
           >
             Por mes
@@ -376,10 +349,39 @@ function ReportesContenido() {
   );
 }
 
+// Punto de entrada por URL real (escritorio, o refresh directo de /reportes):
+// traduce los query params una sola vez al montar y los pasa como estado
+// inicial a ReportesContenido, que de ahí en más vive de estado local.
+function ReportesDesdeUrl() {
+  const searchParams = useSearchParams();
+  const desdeTexto = searchParams.get("desde");
+  const hastaTexto = searchParams.get("hasta");
+  const agrupar = searchParams.get("agrupar");
+
+  const filtroInicial: FiltroReportes = {};
+  if (desdeTexto) {
+    try {
+      filtroInicial.desde = inicioDelDia(textoAFecha(desdeTexto));
+    } catch {
+      // fecha inválida en la URL: se ignora el filtro
+    }
+  }
+  if (hastaTexto) {
+    try {
+      filtroInicial.hasta = finDelDia(textoAFecha(hastaTexto));
+    } catch {
+      // fecha inválida en la URL: se ignora el filtro
+    }
+  }
+  if (agrupar === "mes") filtroInicial.agruparPorMes = true;
+
+  return <ReportesContenido filtroInicial={filtroInicial} />;
+}
+
 export default function ReportesPage() {
   return (
     <Suspense fallback={<p className="text-sm text-slate-500">Cargando...</p>}>
-      <ReportesContenido />
+      <ReportesDesdeUrl />
     </Suspense>
   );
 }

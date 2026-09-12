@@ -20,6 +20,27 @@ export function IconBuscar({ className = "" }: IconProps) {
   );
 }
 
+export function IconCalendario({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`${base} ${className}`}
+    >
+      <rect x="3" y="4.5" width="18" height="16.5" rx="2.5" />
+      <path d="M3 9.5h18" />
+      <path d="M8 2.5v4" />
+      <path d="M16 2.5v4" />
+    </svg>
+  );
+}
+
 export function IconAlertaTriangulo({ className = "" }: IconProps) {
   return (
     <svg
@@ -55,6 +76,25 @@ export function IconReloj({ className = "" }: IconProps) {
     >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+export function IconInicio({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`${base} ${className}`}
+    >
+      <path d="m3 11 9-8 9 8" />
+      <path d="M5 10v10a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V10" />
     </svg>
   );
 }

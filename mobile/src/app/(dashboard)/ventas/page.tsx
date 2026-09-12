@@ -7,6 +7,16 @@ import { db } from "@/lib/db/client";
 import { centavosATexto } from "@/lib/money";
 import { fechaHoraATexto, finDelDia, inicioDelDia, textoAFecha } from "@/lib/dates";
 import type { Cliente, VentaConCliente } from "@/lib/db/types";
+import { CampoFecha } from "@/components/forms/CampoFecha";
+
+function intentarParsear(texto: string | undefined): Date | undefined {
+  if (!texto) return undefined;
+  try {
+    return textoAFecha(texto);
+  } catch {
+    return undefined;
+  }
+}
 
 const ETIQUETAS_FORMA_PAGO: Record<string, string> = {
   EFECTIVO: "Efectivo",
@@ -79,26 +89,8 @@ function VentasContenido() {
       </div>
 
       <form action="/ventas" method="GET" className="grid grid-cols-2 gap-2 rounded-xl bg-white p-3 sm:grid-cols-4">
-        <div>
-          <label className="block text-xs font-medium text-slate-500">Desde</label>
-          <input
-            type="text"
-            name="desde"
-            defaultValue={desde ?? ""}
-            placeholder="dd/mm/aaaa"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500">Hasta</label>
-          <input
-            type="text"
-            name="hasta"
-            defaultValue={hasta ?? ""}
-            placeholder="dd/mm/aaaa"
-            className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-          />
-        </div>
+        <CampoFecha name="desde" label="Desde" defaultValue={intentarParsear(desde)} />
+        <CampoFecha name="hasta" label="Hasta" defaultValue={intentarParsear(hasta)} />
         <div>
           <label className="block text-xs font-medium text-slate-500">Cliente</label>
           <select

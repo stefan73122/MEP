@@ -4,6 +4,8 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { crearProducto, type EstadoFormularioProducto } from "@/actions/productos.actions";
 import type { TipoVenta } from "@/lib/constants";
+import { CampoFecha } from "@/components/forms/CampoFecha";
+import { inicioDelDia } from "@/lib/dates";
 
 const ESTADO_INICIAL: EstadoFormularioProducto = {};
 
@@ -171,15 +173,11 @@ export function NuevoProductoForm() {
 
       {perecedero && (
         <div>
-          <label htmlFor="fechaVencimientoInicialTexto" className={clasesLabel}>
-            Vencimiento del primer lote
-          </label>
-          <input
+          <CampoFecha
             id="fechaVencimientoInicialTexto"
             name="fechaVencimientoInicialTexto"
-            type="text"
-            placeholder="dd/mm/aaaa"
-            className={clasesInput}
+            label="Vencimiento del primer lote"
+            min={inicioDelDia(new Date())}
           />
           <p className="mt-1 text-xs text-slate-500">
             Hace falta solo si cargás una cantidad en &quot;Cantidad del primer lote&quot;. Después vas a

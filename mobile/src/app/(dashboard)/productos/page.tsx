@@ -11,20 +11,15 @@ import { obtenerLotesPorVencer, obtenerLotesVencidos } from "@/lib/lotes";
 import type { Producto } from "@/lib/db/types";
 import { IconAlertaBandera, IconAlertaTriangulo, IconBuscar, IconProductos, IconReloj } from "@/components/ui/icons";
 
-function construirUrl(base: string, params: Record<string, string | undefined>) {
-  const busqueda = new URLSearchParams();
-  for (const [clave, valor] of Object.entries(params)) {
-    if (valor) busqueda.set(clave, valor);
-  }
-  const query = busqueda.toString();
-  return query ? `${base}?${query}` : base;
-}
+export type FiltroProductos = { q?: string; bajo?: boolean; vencimiento?: "vencido" | "porVencer" };
 
-function ProductosContenido() {
-  const searchParams = useSearchParams();
-  const q = searchParams.get("q") ?? undefined;
-  const bajo = searchParams.get("bajo") ?? undefined;
-  const vencimiento = searchParams.get("vencimiento") ?? undefined;
+// Contenido real de la pantalla: estado local, nada de useSearchParams. Así
+// el carrusel de swipe puede montarla como vecina sin pelear por la URL
+// (que solo existe una vez para toda la app).
+export function ProductosContenido({ filtroInicial }: { filtroInicial?: FiltroProductos }) {
+  const [q, setQ] = useState(filtroInicial?.q ?? "");
+  const [bajo, setBajo] = useState(filtroInicial?.bajo ?? false);
+  const [vencimiento, setVencimiento] = useState<"vencido" | "porVencer" | undefined>(filtroInicial?.vencimiento);
 
   const [cargando, setCargando] = useState(true);
   const [simbolo, setSimbolo] = useState("Bs");
@@ -72,7 +67,7 @@ function ProductosContenido() {
       (p) => p.nombre.toLowerCase().includes(qNormalizado) || p.sku.toLowerCase().includes(qNormalizado),
     );
   }
-  if (bajo === "1") {
+  if (bajo) {
     productos = productos.filter((p) => p.stockActual < p.stockMinimo);
   }
   if (vencimiento === "vencido") {
@@ -102,54 +97,48 @@ function ProductosContenido() {
         </div>
       </div>
 
-      <form action="/productos" method="GET" className="flex gap-2">
-        <div className="relative w-full">
-          <IconBuscar className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-primary-500" />
-          <input
-            type="search"
-            name="q"
-            defaultValue={q ?? ""}
-            placeholder="Buscar por nombre o código"
-            className="w-full rounded-lg border border-slate-300 py-2.5 pr-3 pl-9 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-          />
-        </div>
-        {bajo === "1" && <input type="hidden" name="bajo" value="1" />}
-        <button
-          type="submit"
-          className="shrink-0 rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
-        >
-          Buscar
-        </button>
-      </form>
+      <div className="relative w-full">
+        <IconBuscar className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-primary-500" />
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Buscar por nombre o código"
+          className="w-full rounded-lg border border-slate-300 py-2.5 pr-3 pl-9 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+        />
+      </div>
 
       <div className="flex flex-wrap gap-2">
-        <Link
-          href={construirUrl("/productos", { q, bajo: bajo === "1" ? undefined : "1", vencimiento })}
+        <button
+          type="button"
+          onClick={() => setBajo((v) => !v)}
           className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${
-            bajo === "1" ? "bg-danger-500 text-white" : "bg-red-50 text-danger-600 hover:bg-red-100"
+            bajo ? "bg-danger-500 text-white" : "bg-red-50 text-danger-600 hover:bg-red-100"
           }`}
         >
           <IconAlertaTriangulo className="h-3.5 w-3.5" /> Stock bajo ({totalBajoStock})
-        </Link>
+        </button>
         {totalVencidos > 0 && (
-          <Link
-            href={construirUrl("/productos", { q, bajo, vencimiento: vencimiento === "vencido" ? undefined : "vencido" })}
+          <button
+            type="button"
+            onClick={() => setVencimiento((v) => (v === "vencido" ? undefined : "vencido"))}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${
               vencimiento === "vencido" ? "bg-danger-500 text-white" : "bg-red-50 text-danger-600 hover:bg-red-100"
             }`}
           >
             <IconAlertaTriangulo className="h-3.5 w-3.5" /> Vencidos ({totalVencidos})
-          </Link>
+          </button>
         )}
         {totalPorVencer > 0 && (
-          <Link
-            href={construirUrl("/productos", { q, bajo, vencimiento: vencimiento === "porVencer" ? undefined : "porVencer" })}
+          <button
+            type="button"
+            onClick={() => setVencimiento((v) => (v === "porVencer" ? undefined : "porVencer"))}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${
               vencimiento === "porVencer" ? "bg-warning-500 text-white" : "bg-orange-50 text-warning-500 hover:bg-orange-100"
             }`}
           >
             <IconReloj className="h-3.5 w-3.5" /> Por vencer ({totalPorVencer})
-          </Link>
+          </button>
         )}
       </div>
 
@@ -220,10 +209,21 @@ function ProductosContenido() {
   );
 }
 
+// Punto de entrada por URL real (escritorio, o refresh directo de /productos).
+function ProductosDesdeUrl() {
+  const searchParams = useSearchParams();
+  const filtroInicial: FiltroProductos = {
+    q: searchParams.get("q") ?? undefined,
+    bajo: searchParams.get("bajo") === "1",
+    vencimiento: (searchParams.get("vencimiento") as FiltroProductos["vencimiento"]) ?? undefined,
+  };
+  return <ProductosContenido filtroInicial={filtroInicial} />;
+}
+
 export default function ProductosPage() {
   return (
     <Suspense fallback={<p className="text-sm text-slate-500">Cargando...</p>}>
-      <ProductosContenido />
+      <ProductosDesdeUrl />
     </Suspense>
   );
 }

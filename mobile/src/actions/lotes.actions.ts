@@ -1,7 +1,7 @@
 import { db } from "@/lib/db/client";
 import { requireAcceso } from "@/lib/auth";
 import { registrarAuditoria } from "@/lib/audit";
-import { textoAFecha } from "@/lib/dates";
+import { inicioDelDia, textoAFecha } from "@/lib/dates";
 import { textoAUnidadesMinimas } from "@/lib/stock";
 import { descontarFEFO } from "@/lib/lotes";
 import {
@@ -42,6 +42,9 @@ export async function registrarEntradaLote(
   }
   if (cantidad <= 0) {
     return { error: "La cantidad debe ser mayor a cero" };
+  }
+  if (fechaVencimiento < inicioDelDia(new Date())) {
+    return { error: "La fecha de vencimiento no puede ser anterior a hoy" };
   }
 
   const stockAnterior = producto.stockActual;

@@ -14,6 +14,7 @@ import { centavosATexto, textoACentavos } from "@/lib/money";
 import { textoAUnidadesMinimas } from "@/lib/stock";
 import type { FormaPago } from "@/lib/constants";
 import { IconAlertaTriangulo, IconBuscar } from "@/components/ui/icons";
+import { borrarBorrador, guardarBorradorConDemora, type BorradorVenta } from "@/lib/borradorVenta";
 
 const ESTADO_INICIAL: EstadoVentaForm = {};
 
@@ -35,15 +36,27 @@ type ItemCarrito = {
 
 type ClienteOpcion = { id: number; nombre: string };
 
-const FORMAS: { valor: FormaPago; etiqueta: string }[] = [
+const FORMAS: { valor: FormaPago; etiqueta: React.ReactNode }[] = [
   { valor: "EFECTIVO", etiqueta: "Efectivo" },
-  { valor: "TRANSFERENCIA_QR", etiqueta: "Transferencia/QR" },
+  // Abreviado en dos líneas (igual que el diseño de referencia): en una sola
+  // línea "Transferencia/QR" no entra en el tercio de la fila.
+  {
+    valor: "TRANSFERENCIA_QR",
+    etiqueta: (
+      <>
+        Transf.
+        <br />
+        QR
+      </>
+    ),
+  },
   { valor: "CREDITO", etiqueta: "Crédito" },
 ];
 
 type Props = {
   clientes: ClienteOpcion[];
   simbolo: string;
+  borradorInicial?: BorradorVenta | null;
 };
 
 function calcularBruto(item: ItemCarrito): number {
@@ -64,17 +77,17 @@ function calcularDescuentoItem(item: ItemCarrito): number {
   }
 }
 
-export function VentaForm({ clientes, simbolo }: Props) {
+export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
   const router = useRouter();
   const [estado, formAction, enviando] = useActionState(crearVenta, ESTADO_INICIAL);
 
   const [query, setQuery] = useState("");
   const [resultados, setResultados] = useState<ProductoBusquedaVenta[]>([]);
   const [buscando, setBuscando] = useState(false);
-  const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
-  const [clienteId, setClienteId] = useState("");
-  const [formaPago, setFormaPago] = useState<FormaPago>("EFECTIVO");
-  const [descuentoTotalTexto, setDescuentoTotalTexto] = useState("");
+  const [carrito, setCarrito] = useState<ItemCarrito[]>(() => borradorInicial?.carrito ?? []);
+  const [clienteId, setClienteId] = useState(() => borradorInicial?.clienteId ?? "");
+  const [formaPago, setFormaPago] = useState<FormaPago>(() => borradorInicial?.formaPago ?? "EFECTIVO");
+  const [descuentoTotalTexto, setDescuentoTotalTexto] = useState(() => borradorInicial?.descuentoTotalTexto ?? "");
   const confirmarExcesoRef = useRef<HTMLInputElement>(null);
 
   const [clientesLista, setClientesLista] = useState<ClienteOpcion[]>(clientes);
@@ -92,8 +105,25 @@ export function VentaForm({ clientes, simbolo }: Props) {
   const [creandoProducto, iniciarCreacionProducto] = useTransition();
 
   useEffect(() => {
-    if (estado.id) router.replace(`/ventas/detalle?id=${estado.id}`);
+    if (estado.id) {
+      borrarBorrador();
+      router.replace(`/ventas/detalle?id=${estado.id}`);
+    }
   }, [estado, router]);
+
+  // Venta a medio registrar: se guarda en el dispositivo para no perderla al
+  // cambiar de pantalla (swipe) ni si el sistema interrumpe la app.
+  useEffect(() => {
+    guardarBorradorConDemora({ carrito, clienteId, formaPago, descuentoTotalTexto });
+  }, [carrito, clienteId, formaPago, descuentoTotalTexto]);
+
+  function vaciarCarrito() {
+    setCarrito([]);
+    setClienteId("");
+    setFormaPago("EFECTIVO");
+    setDescuentoTotalTexto("");
+    borrarBorrador();
+  }
 
   useEffect(() => {
     // Si cambia el cliente o el carrito, cualquier confirmación de exceso de
@@ -331,10 +361,24 @@ export function VentaForm({ clientes, simbolo }: Props) {
         )}
       </div>
 
+      <div data-swipe-ignorar="true">
       {carrito.length === 0 ? (
         <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Todavía no agregaste productos.</p>
       ) : (
-        <ul className="space-y-2">
+        <>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-slate-700">
+            Carrito ({carrito.length} producto{carrito.length === 1 ? "" : "s"})
+          </span>
+          <button
+            type="button"
+            onClick={vaciarCarrito}
+            className="text-xs font-medium text-danger-600 hover:underline"
+          >
+            Vaciar
+          </button>
+        </div>
+        <ul className="mt-2 space-y-2">
           {carrito.map((item) => (
             <li key={item.productoId} className="rounded-lg border border-slate-200 p-3">
               <div className="flex items-start justify-between gap-2">
@@ -385,7 +429,9 @@ export function VentaForm({ clientes, simbolo }: Props) {
             </li>
           ))}
         </ul>
+        </>
       )}
+      </div>
 
       <div>
         <div className="flex items-center justify-between">
@@ -479,7 +525,7 @@ export function VentaForm({ clientes, simbolo }: Props) {
           {FORMAS.map((opcion) => (
             <label
               key={opcion.valor}
-              className={`flex -skew-x-[7deg] cursor-pointer items-center justify-center rounded-lg border px-2 py-2 text-center text-xs font-medium ${
+              className={`flex min-w-0 -skew-x-[7deg] cursor-pointer items-center justify-center rounded-lg border px-1 py-2 text-center text-xs font-medium ${
                 formaPago === opcion.valor
                   ? "border-primary-500 bg-primary-50 text-primary-700"
                   : "border-slate-300 text-slate-600"
@@ -493,7 +539,7 @@ export function VentaForm({ clientes, simbolo }: Props) {
                 onChange={() => setFormaPago(opcion.valor)}
                 className="sr-only"
               />
-              <span className="skew-x-[7deg]">{opcion.etiqueta}</span>
+              <span className="skew-x-[7deg] leading-tight">{opcion.etiqueta}</span>
             </label>
           ))}
         </div>
