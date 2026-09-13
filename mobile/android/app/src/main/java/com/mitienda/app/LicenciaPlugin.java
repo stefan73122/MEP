@@ -32,10 +32,10 @@ public class LicenciaPlugin extends Plugin {
     //
     // Para cambiarla: ver las instrucciones en licencias/LEEME-SEGURIDAD.txt.
     private static final int MASCARA_XOR = 0x5A;
-    private static final int[] FRAGMENTO_1 = xorDeTexto("MIP-2026-", MASCARA_XOR);
-    private static final int[] FRAGMENTO_2 = xorDeTexto("LLAVE-SEC", MASCARA_XOR);
-    private static final int[] FRAGMENTO_3 = xorDeTexto("RETA-DE-A", MASCARA_XOR);
-    private static final int[] FRAGMENTO_4 = xorDeTexto("CTIVACION", MASCARA_XOR);
+    private static final int[] FRAGMENTO_1 = xorDeTexto("YELD31-V9", MASCARA_XOR);
+    private static final int[] FRAGMENTO_2 = xorDeTexto("B56E-WCEB", MASCARA_XOR);
+    private static final int[] FRAGMENTO_3 = xorDeTexto("ZS-LKC99", MASCARA_XOR);
+    private static final int[] FRAGMENTO_4 = xorDeTexto("3-AJB1EW", MASCARA_XOR);
 
     private static int[] xorDeTexto(String texto, int mascara) {
         int[] resultado = new int[texto.length()];

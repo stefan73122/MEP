@@ -7,7 +7,7 @@ import type { LicenciaNativaPlugin } from "./licenciaNativa";
 // es únicamente para poder probar la pantalla de activación sin un
 // dispositivo. Tiene que reconstruir la MISMA fórmula que el plugin nativo
 // y que licencias/generador-de-claves.html.
-const PALABRA_SECRETA_SOLO_PARA_PROBAR_EN_NAVEGADOR = "MIP-2026-LLAVE-SECRETA-DE-ACTIVACION";
+const PALABRA_SECRETA_SOLO_PARA_PROBAR_EN_NAVEGADOR = "YELD31-V9B56E-WCEBZS-LKC993-AJB1EW";
 
 async function sha256Hex(texto: string): Promise<string> {
   const datos = new TextEncoder().encode(texto);
