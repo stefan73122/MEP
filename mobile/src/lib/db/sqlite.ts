@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS Configuracion (
   diasAlertaVencimiento INTEGER NOT NULL DEFAULT 30,
   bloqueoActivado INTEGER NOT NULL DEFAULT 0,
   huellaActivada INTEGER NOT NULL DEFAULT 0,
+  licenciaActivada INTEGER NOT NULL DEFAULT 0,
+  licenciaCodigoDispositivo TEXT,
   updatedAt INTEGER NOT NULL
 );
 
@@ -153,6 +155,12 @@ async function agregarColumnasFaltantes(conexion: SQLiteDBConnection): Promise<v
   }
   if (!columnas.has("huellaActivada")) {
     await conexion.execute("ALTER TABLE Configuracion ADD COLUMN huellaActivada INTEGER NOT NULL DEFAULT 0;");
+  }
+  if (!columnas.has("licenciaActivada")) {
+    await conexion.execute("ALTER TABLE Configuracion ADD COLUMN licenciaActivada INTEGER NOT NULL DEFAULT 0;");
+  }
+  if (!columnas.has("licenciaCodigoDispositivo")) {
+    await conexion.execute("ALTER TABLE Configuracion ADD COLUMN licenciaCodigoDispositivo TEXT;");
   }
 }
 

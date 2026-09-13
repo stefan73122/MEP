@@ -19,6 +19,9 @@
 # diseño de referencia (no forma parte del código de la app)
 /diseno
 
+# claves de licencia (genera claves de activación; nunca debe subirse)
+/licencias
+
 # varios
 .DS_Store
 *.pem

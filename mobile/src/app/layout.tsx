@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo } from "next/font/google";
 import { SplashGate } from "@/components/layout/SplashGate";
+import { LicenciaGate } from "@/components/licencia/LicenciaGate";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -28,7 +29,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={archivo.variable}>
       <body className="antialiased">
-        <SplashGate>{children}</SplashGate>
+        <SplashGate>
+          <LicenciaGate>{children}</LicenciaGate>
+        </SplashGate>
       </body>
     </html>
   );

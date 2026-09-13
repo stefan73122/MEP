@@ -11,6 +11,8 @@ export type Configuracion = {
   diasAlertaVencimiento: number;
   bloqueoActivado: boolean;
   huellaActivada: boolean;
+  licenciaActivada: boolean;
+  licenciaCodigoDispositivo: string | null;
   updatedAt: Date;
 };
 

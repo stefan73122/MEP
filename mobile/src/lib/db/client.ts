@@ -106,10 +106,17 @@ function mapGasto(f: FilaGasto): Gasto {
 
 type FilaConfiguracion = {
   id: number; nombreNegocio: string; moneda: string; simboloMoneda: string; pinHash: string | null;
-  diasAlertaVencimiento: number; bloqueoActivado: number; huellaActivada: number; updatedAt: number;
+  diasAlertaVencimiento: number; bloqueoActivado: number; huellaActivada: number;
+  licenciaActivada: number; licenciaCodigoDispositivo: string | null; updatedAt: number;
 };
 function mapConfiguracion(f: FilaConfiguracion): Configuracion {
-  return { ...f, bloqueoActivado: !!f.bloqueoActivado, huellaActivada: !!f.huellaActivada, updatedAt: new Date(f.updatedAt) };
+  return {
+    ...f,
+    bloqueoActivado: !!f.bloqueoActivado,
+    huellaActivada: !!f.huellaActivada,
+    licenciaActivada: !!f.licenciaActivada,
+    updatedAt: new Date(f.updatedAt),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -659,6 +666,7 @@ const configuracion = {
     data: Partial<{
       nombreNegocio: string; moneda: string; simboloMoneda: string; pinHash: string | null; diasAlertaVencimiento: number;
       bloqueoActivado: boolean; huellaActivada: boolean;
+      licenciaActivada: boolean; licenciaCodigoDispositivo: string | null;
     }>,
   ): Promise<void> {
     const campos: string[] = [];
@@ -670,6 +678,8 @@ const configuracion = {
     if (data.diasAlertaVencimiento !== undefined) { campos.push("diasAlertaVencimiento = ?"); params.push(data.diasAlertaVencimiento); }
     if (data.bloqueoActivado !== undefined) { campos.push("bloqueoActivado = ?"); params.push(b(data.bloqueoActivado)); }
     if (data.huellaActivada !== undefined) { campos.push("huellaActivada = ?"); params.push(b(data.huellaActivada)); }
+    if (data.licenciaActivada !== undefined) { campos.push("licenciaActivada = ?"); params.push(b(data.licenciaActivada)); }
+    if (data.licenciaCodigoDispositivo !== undefined) { campos.push("licenciaCodigoDispositivo = ?"); params.push(data.licenciaCodigoDispositivo); }
     campos.push("updatedAt = ?");
     params.push(Date.now());
     params.push(id);
