@@ -107,7 +107,7 @@ export function NavBar() {
             <Link
               key={href}
               href={href}
-              className="relative flex flex-1 -skew-x-[8deg] flex-col items-center justify-center gap-1 rounded-lg py-2"
+              className="relative flex flex-1 -skew-x-[8deg] flex-col items-center justify-center gap-1 overflow-hidden rounded-lg py-2"
               style={{
                 backgroundColor: intensidad > 0 ? `rgba(255,213,36,${intensidad})` : "transparent",
                 boxShadow: intensidad > 0.5 ? "0 3px 0 #a57e00" : "none",

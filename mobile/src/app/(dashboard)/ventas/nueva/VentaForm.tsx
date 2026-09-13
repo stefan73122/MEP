@@ -595,11 +595,17 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
 
       <fieldset>
         <legend className="block text-sm font-medium text-slate-700">Forma de pago</legend>
-        <div className="mt-1 grid grid-cols-3 gap-2">
+        {/* pl-1.5: la primera píldora se inclina con -skew-x, así que su
+            esquina inferior izquierda sobresale un poco de su propia caja
+            (es el aspecto buscado). Sin este margen no le queda dónde
+            sobresalir dentro de esta misma pantalla, y el recorte del
+            carrusel (que evita que se cuele en la pantalla vecina) le corta
+            la esquina de forma visible. */}
+        <div className="mt-1 grid grid-cols-3 gap-2 pl-1.5">
           {FORMAS.map((opcion) => (
             <label
               key={opcion.valor}
-              className={`flex min-w-0 -skew-x-[7deg] cursor-pointer items-center justify-center rounded-lg border px-1 py-2 text-center text-xs font-medium ${
+              className={`flex min-w-0 -skew-x-[7deg] cursor-pointer items-center justify-center overflow-hidden rounded-lg border px-1 py-2 text-center text-xs font-medium ${
                 formaPago === opcion.valor
                   ? "border-primary-500 bg-primary-50 text-primary-700"
                   : "border-slate-300 text-slate-600"

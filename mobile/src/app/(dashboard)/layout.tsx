@@ -64,8 +64,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div className="flex flex-1 flex-col">
           <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 md:pt-3">
-            {/* eslint-disable-next-line @next/next/no-img-element -- sin optimización de imágenes, es una export estática sin servidor */}
-            <img src="/logo-mip.png" alt="MIP" className="h-9 w-9 shrink-0 object-contain" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black">
+              {/* eslint-disable-next-line @next/next/no-img-element -- sin optimización de imágenes, es una export estática sin servidor */}
+              <img src="/logo-mip.png" alt="MIP" className="h-7 w-7 object-contain" />
+            </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm leading-tight font-bold text-slate-900">MIP</p>
               <p className="truncate text-xs leading-tight text-slate-500">Mi Inventario Personal</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { aplicarTema, leerTema } from "@/lib/tema";
 
 const DURACION_MINIMA_MS = 1000;
 
@@ -15,6 +16,7 @@ export function SplashGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const temporizador = setTimeout(() => setMostrando(false), DURACION_MINIMA_MS);
+    leerTema().then(aplicarTema);
     return () => clearTimeout(temporizador);
   }, []);
 

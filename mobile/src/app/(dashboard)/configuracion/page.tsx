@@ -6,6 +6,7 @@ import { DIAS_ALERTA_VENCIMIENTO_DEFECTO } from "@/lib/constants";
 import type { Configuracion } from "@/lib/db/types";
 import { ConfiguracionForm } from "./ConfiguracionForm";
 import { PinForm } from "./PinForm";
+import { TemaForm } from "./TemaForm";
 
 export default function ConfiguracionPage() {
   const [cargando, setCargando] = useState(true);
@@ -41,6 +42,11 @@ export default function ConfiguracionPage() {
           diasAlertaVencimiento={configuracion?.diasAlertaVencimiento ?? DIAS_ALERTA_VENCIMIENTO_DEFECTO}
           onExito={recargar}
         />
+      </div>
+
+      <div className="rounded-xl bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">Apariencia</h2>
+        <TemaForm />
       </div>
 
       <div className="rounded-xl bg-white p-4">

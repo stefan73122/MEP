@@ -104,7 +104,11 @@ export function PagerPrincipal() {
   useLayoutEffect(() => {
     const el = contenedorRef.current;
     if (!el) return;
-    const medir = () => setAnchoContenedor(el.offsetWidth);
+    // getBoundingClientRect (no offsetWidth): offsetWidth redondea a entero,
+    // pero cada pantalla se dibuja con el ancho real (con decimales) del
+    // contenedor — esa fracción perdida se acumulaba entre pantallas vecinas
+    // y se veía como una línea del borde de una pantalla asomando en la de al lado.
+    const medir = () => setAnchoContenedor(el.getBoundingClientRect().width);
     medir();
     const obs = new ResizeObserver(medir);
     obs.observe(el);
@@ -328,6 +332,14 @@ export function PagerPrincipal() {
   const progreso = anchoContenedor > 0 ? -arrastrePx / anchoContenedor : 0;
   const centro = posicionActivaEnTrack - progreso;
   const transform = `translate3d(${-posicionActivaEnTrack * anchoContenedor + arrastrePx}px, 0, 0)`;
+  // Sin gesto ni animación en curso, las vecinas quedan totalmente fuera de
+  // la vista (traducidas un ancho entero para cualquier lado) — atenuarlas
+  // igual con opacity < 1 las obliga a componerse en una capa GPU aparte y
+  // translúcida, y esa capa dejaba asomar una línea de su contenido justo en
+  // el borde de la pantalla activa (el "Efectivo" de Vender sobre Inicio).
+  // El difuminado sólo tiene sentido, y sólo se aplica, mientras se ve la
+  // transición en vivo.
+  const enMovimiento = gestoRef.current !== null || rafIdRef.current !== null;
 
   return (
     <PagerContext.Provider value={{ indiceActivo, progreso, irA }}>
@@ -358,9 +370,9 @@ export function PagerPrincipal() {
             const pantalla = PANTALLAS_PRINCIPALES[indice];
             const conFiltro = filtroPendiente?.href === pantalla.href ? filtroPendiente : null;
             const posicionEnTrack = montados.indexOf(indice);
-            const opacidad = 1 - 0.15 * Math.min(1, Math.abs(posicionEnTrack - centro));
+            const opacidad = enMovimiento ? 1 - 0.15 * Math.min(1, Math.abs(posicionEnTrack - centro)) : 1;
             return (
-              <div key={pantalla.href} className="w-full shrink-0" style={{ opacity: opacidad }}>
+              <div key={pantalla.href} className="w-full shrink-0 overflow-hidden" style={{ opacity: opacidad }}>
                 <pantalla.Componente key={conFiltro ? conFiltro.nonce : "base"} filtroInicial={conFiltro?.filtro} />
               </div>
             );
