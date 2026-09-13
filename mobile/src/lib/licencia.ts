@@ -1,13 +1,6 @@
 import { Device } from "@capacitor/device";
 import { db } from "./db/client";
-
-// ============================================================================
-// ⚠️ PALABRA SECRETA DE ACTIVACIÓN ⚠️
-// Tiene que ser IDÉNTICA a la de "licencias/generador-de-claves.html"
-// (fuera de este proyecto de código, sin subir a git). Si se cambia acá sin
-// cambiarla también ahí, las claves que genere esa página dejan de servir.
-const PALABRA_SECRETA = "MIP-2026-LLAVE-SECRETA-DE-ACTIVACION";
-// ============================================================================
+import LicenciaNativa from "./licenciaNativa";
 
 async function sha256Hex(texto: string): Promise<string> {
   const datos = new TextEncoder().encode(texto);
@@ -27,19 +20,12 @@ function agruparDeACuatro(codigo: string): string {
 // no uno solo por teléfono). No se muestra el identificador crudo (largo y
 // en minúsculas, incómodo para dictar o escribir): se deriva de él un código
 // corto en mayúsculas, mismo estilo que la clave de activación pero de un
-// largo distinto para no confundirlos.
+// largo distinto para no confundirlos. Esto no es secreto (se comparte a
+// propósito), así que no hace falta que viva en código nativo.
 export async function obtenerCodigoDispositivo(): Promise<string> {
   const { identifier } = await Device.getId();
   const hash = await sha256Hex(identifier);
   return agruparDeACuatro(hash.slice(0, 12).toUpperCase());
-}
-
-// Misma fórmula, a mano, en "licencias/generador-de-claves.html": código de
-// dispositivo + palabra secreta, hash, primeros 16 caracteres en mayúsculas,
-// agrupados de a 4.
-export async function calcularClaveActivacion(codigoDispositivo: string): Promise<string> {
-  const hash = await sha256Hex(codigoDispositivo + PALABRA_SECRETA);
-  return agruparDeACuatro(hash.slice(0, 16).toUpperCase());
 }
 
 function normalizar(clave: string): string {
@@ -58,12 +44,20 @@ export async function obtenerEstadoLicencia(): Promise<EstadoLicencia> {
   return { activada, codigoDispositivo };
 }
 
+// La validación de la clave (y la palabra secreta) viven en el plugin nativo
+// Android — ver android/app/src/main/java/com/mitienda/app/LicenciaPlugin.java.
+// Este archivo (JavaScript, empaquetado como texto plano dentro del APK)
+// nunca ve la palabra secreta ni la clave correcta: solo manda el código de
+// dispositivo y lo que el usuario escribió, y recibe verdadero/falso.
 export async function activarConClave(
   codigoDispositivo: string,
   claveIngresada: string,
 ): Promise<{ error?: string }> {
-  const esperada = await calcularClaveActivacion(codigoDispositivo);
-  if (normalizar(claveIngresada) !== esperada) {
+  const { valida } = await LicenciaNativa.validarClave({
+    codigoDispositivo,
+    clave: normalizar(claveIngresada),
+  });
+  if (!valida) {
     return { error: "Clave incorrecta" };
   }
 
@@ -76,4 +70,12 @@ export async function activarConClave(
     }),
   );
   return {};
+}
+
+// Comprueba que el APK esté firmado con la firma esperada (embebida en el
+// plugin nativo). Si alguien lo modificó y lo volvió a firmar con otra
+// clave, esto da falso — ver PantallaAppInvalida.
+export async function verificarFirmaValida(): Promise<boolean> {
+  const { valida } = await LicenciaNativa.verificarFirma();
+  return valida;
 }

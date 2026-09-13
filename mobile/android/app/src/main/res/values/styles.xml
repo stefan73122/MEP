@@ -16,7 +16,13 @@
     </style>
 
 
+    <!-- Sin logo ni imagen: solo el color de fondo oscuro del tema de la
+         app (mismo que colorPrimary, la variable mt bg app del CSS), para
+         que no haya ningún destello blanco entre el arranque nativo y la
+         propia intro de MIP (ver SplashGate en el JS): pasan a verse como
+         una sola pantalla continua. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="android:background">@color/colorPrimary</item>
+        <item name="windowSplashScreenBackground">@color/colorPrimary</item>
     </style>
 </resources>
