@@ -432,7 +432,7 @@ export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroRep
           )}
         </div>
         <p className="mb-2 text-xs text-slate-500">
-          Opcional: registralos solo si querés ver la ganancia real, no hace falta para vender.
+          Opcional: regístralos solo si quieres ver la ganancia real, no hace falta para vender.
         </p>
 
         <GastoForm onExito={recargar} />

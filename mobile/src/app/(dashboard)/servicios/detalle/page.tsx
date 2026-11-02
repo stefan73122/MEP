@@ -57,7 +57,7 @@ function ServicioDetalleContenido() {
       <div className="rounded-xl bg-white p-4">
         <p className="mb-2 text-xs text-slate-500">
           {servicio.activo
-            ? "Si ya no lo ofrecés, desactivalo: deja de aparecer al atender, pero las atenciones pasadas lo siguen mostrando."
+            ? "Si ya no lo ofreces, desactívalo: deja de aparecer al atender, pero las atenciones pasadas lo siguen mostrando."
             : "Está desactivado: no aparece al registrar una atención."}
         </p>
         <button

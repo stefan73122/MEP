@@ -10,7 +10,7 @@ const textoOpcional = (max: number) =>
 
 export const servicioSchema = z.object({
   nombre: z.string().trim().min(1, "El nombre es obligatorio").max(120),
-  precioTexto: z.string().min(1, "Ingresá el precio"),
+  precioTexto: z.string().min(1, "Ingresa el precio"),
   duracionTexto: textoOpcional(10),
   descripcion: textoOpcional(300),
 });

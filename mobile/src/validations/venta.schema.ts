@@ -17,7 +17,7 @@ export const itemsVentaArraySchema = z.array(itemVentaSchema);
 // editable al atender (el del servicio es solo el sugerido).
 export const itemServicioSchema = z.object({
   servicioId: z.number().int().positive(),
-  precioTexto: z.string().min(1, "Ingresá el precio del servicio"),
+  precioTexto: z.string().min(1, "Ingresa el precio del servicio"),
   cantidadTexto: z.string().min(1),
   descuentoTexto: z.string().optional(),
 });
@@ -31,7 +31,7 @@ const clienteIdOpcional = z.preprocess(
 
 export const crearVentaSchema = z.object({
   clienteId: clienteIdOpcional,
-  formaPago: z.enum(FORMAS_PAGO, { message: "Elegí la forma de pago" }),
+  formaPago: z.enum(FORMAS_PAGO, { message: "Elige la forma de pago" }),
   descuentoTotalTexto: z.string().optional(),
   itemsJson: z
     .string()
@@ -56,7 +56,7 @@ export type CrearVentaInput = z.infer<typeof crearVentaSchema>;
 
 export const anularVentaSchema = z.object({
   ventaId: z.coerce.number().int().positive(),
-  motivo: z.string().trim().min(3, "Contá brevemente el motivo (mínimo 3 caracteres)").max(200),
+  motivo: z.string().trim().min(3, "Describe brevemente el motivo (mínimo 3 caracteres)").max(200),
 });
 
 export type AnularVentaInput = z.infer<typeof anularVentaSchema>;

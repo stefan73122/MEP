@@ -558,7 +558,7 @@ export function VentaForm({ clientes, servicios, serviciosFrecuentes, simbolo, b
               &quot;{productoPendienteVencido.nombre}&quot; tiene el lote vencido desde el{" "}
               {productoPendienteVencido.proximoVencimiento}.
             </p>
-            <p className="text-xs text-slate-500">Es perecedero: confirmá que querés venderlo igual.</p>
+            <p className="text-xs text-slate-500">Es perecedero: confirma que quieres venderlo igual.</p>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -633,7 +633,7 @@ export function VentaForm({ clientes, servicios, serviciosFrecuentes, simbolo, b
               </button>
             </div>
             <p className="text-xs text-slate-400">
-              El resto de los datos (categoría, precio de compra, stock mínimo...) los podés completar
+              El resto de los datos (categoría, precio de compra, stock mínimo...) los puedes completar
               después desde la ficha del producto.
             </p>
           </div>
@@ -853,7 +853,7 @@ export function VentaForm({ clientes, servicios, serviciosFrecuentes, simbolo, b
         </div>
         {faltaClienteParaCredito && (
           <p className="mt-2 flex items-center gap-2 rounded-lg bg-danger-500/10 px-3 py-2 text-xs font-medium text-danger-600">
-            <IconAlertaTriangulo className="h-4 w-4" /> Elegí un cliente para{" "}
+            <IconAlertaTriangulo className="h-4 w-4" /> Elige un cliente para{" "}
             {modoServicios ? "registrar a crédito" : "vender a crédito"}.
           </p>
         )}

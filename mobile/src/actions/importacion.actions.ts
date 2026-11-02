@@ -16,7 +16,7 @@ export async function previsualizarImportacion(
 
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {
-    return { error: "Subí un archivo Excel (.xlsx)" };
+    return { error: "Sube un archivo Excel (.xlsx)" };
   }
 
   const buffer = await archivo.arrayBuffer();

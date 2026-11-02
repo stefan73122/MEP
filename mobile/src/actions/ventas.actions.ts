@@ -81,7 +81,7 @@ export async function crearProductoRapido(
 
   const nombreLimpio = nombre.trim();
   if (!nombreLimpio) {
-    return { error: "Ingresá el nombre del producto" };
+    return { error: "Ingresa el nombre del producto" };
   }
 
   let precioVenta: number;
@@ -91,7 +91,7 @@ export async function crearProductoRapido(
     return { error: (error as Error).message };
   }
   if (precioVenta <= 0) {
-    return { error: "Ingresá un precio de venta válido" };
+    return { error: "Ingresa un precio de venta válido" };
   }
 
   try {
@@ -138,7 +138,7 @@ export async function crearProductoRapido(
       },
     };
   } catch {
-    return { error: "No se pudo crear el producto. Intentá de nuevo." };
+    return { error: "No se pudo crear el producto. Intenta de nuevo." };
   }
 }
 
@@ -175,7 +175,7 @@ export async function crearVenta(
   const serviciosPedidos = serviciosResultado.data;
 
   if (items.length === 0 && serviciosPedidos.length === 0) {
-    return { error: "Agregá al menos un producto o servicio" };
+    return { error: "Agrega al menos un producto o servicio" };
   }
 
   const tieneDescuento = (texto: string | undefined) => !!texto && texto.trim() !== "" && texto.trim() !== "0";
@@ -185,11 +185,11 @@ export async function crearVenta(
   const hayDescuentoTotal =
     !!descuentoTotalTexto && descuentoTotalTexto.trim() !== "" && descuentoTotalTexto.trim() !== "0";
   if (hayDescuentoPorItem && hayDescuentoTotal) {
-    return { error: "Usá descuento por ítem o descuento al total, no los dos a la vez" };
+    return { error: "Usa descuento por ítem o descuento al total, no los dos a la vez" };
   }
 
   if (formaPago === "CREDITO" && !clienteId) {
-    return { error: "Elegí un cliente para registrar a crédito" };
+    return { error: "Elige un cliente para registrar a crédito" };
   }
 
   let descuentoTotalCentavos = 0;
@@ -356,7 +356,7 @@ export async function crearVenta(
     const saldoActual = await calcularSaldoPendiente(db, clienteId);
     if (saldoActual + total > cliente.limiteCredito && confirmarExcesoCredito !== "1") {
       return {
-        error: `${cliente.nombre} va a superar su límite de crédito con esto. Confirmá si querés registrarlo igual.`,
+        error: `${cliente.nombre} va a superar su límite de crédito con esto. Confirma si quieres registrarlo igual.`,
         requiereConfirmacion: true,
       };
     }
@@ -433,7 +433,7 @@ export async function crearVenta(
       return venta.id;
     });
   } catch {
-    return { error: "No se pudo registrar. Intentá de nuevo." };
+    return { error: "No se pudo registrar. Intenta de nuevo." };
   }
 
   return { id: ventaId };
@@ -515,7 +515,7 @@ export async function anularVenta(
       });
     });
   } catch {
-    return { error: "No se pudo anular la venta. Intentá de nuevo." };
+    return { error: "No se pudo anular la venta. Intenta de nuevo." };
   }
 
   return { exito: true };

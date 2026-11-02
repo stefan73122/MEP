@@ -11,13 +11,13 @@ const OPCIONES: { valor: TipoNegocio; titulo: string; detalle: string; Icono: ty
   {
     valor: "tienda",
     titulo: "Tienda de abarrotes",
-    detalle: "Vendés productos: stock, lotes y vencimientos.",
+    detalle: "Vendes productos: stock, lotes y vencimientos.",
     Icono: IconProductos,
   },
   {
     valor: "servicios",
     titulo: "Negocio de servicios",
-    detalle: "Peluquería, taller, manicure... Registrás atenciones (y si querés, también vendés productos).",
+    detalle: "Peluquería, taller, manicure... Registras atenciones (y si quieres, también vendes productos).",
     Icono: IconServicios,
   },
 ];
@@ -125,7 +125,7 @@ function Bienvenida({ onElegir }: { onElegir: (tipo: TipoNegocio) => Promise<{ e
         >
           {guardando ? "Guardando..." : "Continuar"}
         </button>
-        <p className="text-center text-xs text-slate-500">Lo podés cambiar después desde Configuración.</p>
+        <p className="text-center text-xs text-slate-500">Lo puedes cambiar después desde Configuración.</p>
       </div>
     </div>
   );

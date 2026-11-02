@@ -50,7 +50,7 @@ export function TipoNegocioForm() {
       </div>
       <p className="text-xs text-slate-500">
         {tipo === "servicios"
-          ? "Peluquería, taller, manicure...: registrás atenciones con servicios y, si querés, también productos."
+          ? "Peluquería, taller, manicure...: registras atenciones con servicios y, si quieres, también productos."
           : "Tienda de abarrotes: ventas de productos con stock y vencimientos."}{" "}
         Cambiarlo no borra nada: tus productos, ventas, servicios y clientes quedan como están.
       </p>

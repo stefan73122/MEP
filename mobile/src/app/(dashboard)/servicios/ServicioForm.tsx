@@ -86,7 +86,7 @@ export function ServicioForm({ servicio, onGuardado }: { servicio?: Servicio; on
         </div>
       </div>
       <p className="-mt-2 text-xs text-slate-500">
-        Es el precio sugerido: al registrar una atención lo podés cambiar.
+        Es el precio sugerido: al registrar una atención lo puedes cambiar.
       </p>
 
       <div>

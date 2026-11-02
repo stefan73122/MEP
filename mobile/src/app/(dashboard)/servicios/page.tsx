@@ -78,7 +78,7 @@ export function ServiciosContenido() {
         <div className="rounded-xl bg-white p-5 text-center">
           <IconServicios className="mx-auto h-8 w-8 text-slate-400" />
           <p className="mt-2 text-sm text-slate-600">Todavía no cargaste servicios.</p>
-          <p className="text-xs text-slate-500">Agregá los que ofrecés (ej. &quot;Corte de pelo&quot;) con su precio.</p>
+          <p className="text-xs text-slate-500">Agrega los que ofreces (ej. &quot;Corte de pelo&quot;) con su precio.</p>
         </div>
       ) : visibles.length === 0 ? (
         <p className="rounded-lg bg-white p-4 text-sm text-slate-500">No se encontraron servicios.</p>

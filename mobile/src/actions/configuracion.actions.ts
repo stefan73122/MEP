@@ -42,7 +42,7 @@ export async function actualizarConfiguracion(
       tx.configuracion.update(configuracion.id, { nombreNegocio, moneda, simboloMoneda, diasAlertaVencimiento }),
     );
   } catch {
-    return { error: "No se pudo guardar la configuración. Intentá de nuevo." };
+    return { error: "No se pudo guardar la configuración. Intenta de nuevo." };
   }
 
   return { exito: true };
@@ -64,7 +64,7 @@ export async function configurarPin(
     const pinHash = await hashPin(resultado.data.pin);
     await db.$transaction((tx) => tx.configuracion.update(configuracion.id, { pinHash }));
   } catch {
-    return { error: "No se pudo guardar el PIN. Intentá de nuevo." };
+    return { error: "No se pudo guardar el PIN. Intenta de nuevo." };
   }
 
   return { exito: true };
@@ -86,7 +86,7 @@ export async function activarBloqueo(): Promise<EstadoConfiguracion> {
 
   const configuracion = await obtenerOCrearConfiguracion();
   if (!configuracion.pinHash) {
-    return { error: "Primero definí un PIN." };
+    return { error: "Primero define un PIN." };
   }
 
   await db.$transaction((tx) => tx.configuracion.update(configuracion.id, { bloqueoActivado: true }));
@@ -134,7 +134,7 @@ export async function guardarTipoNegocio(tipo: TipoNegocio): Promise<EstadoConfi
       tx.configuracion.update(configuracion.id, { tipoNegocio: tipo, onboardingVersion: ONBOARDING_VERSION }),
     );
   } catch {
-    return { error: "No se pudo guardar el tipo de negocio. Intentá de nuevo." };
+    return { error: "No se pudo guardar el tipo de negocio. Intenta de nuevo." };
   }
   return { exito: true };
 }

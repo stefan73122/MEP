@@ -158,7 +158,7 @@ export function alTocarNotificacion(escuchar: () => void): () => void {
 
 export type ResultadoNotificaciones = { ok: true } | { ok: false; error: string };
 
-const ERROR_SIN_PERMISO = "MIP no tiene permiso para mostrar notificaciones. Activalo en los ajustes del teléfono.";
+const ERROR_SIN_PERMISO = "MIP no tiene permiso para mostrar notificaciones. Actívalo en los ajustes del teléfono.";
 const ERROR_SOLO_APK = "Las notificaciones solo funcionan en la app instalada en el teléfono.";
 
 export async function guardarConfigNotificaciones(config: ConfigNotificaciones): Promise<ResultadoNotificaciones> {

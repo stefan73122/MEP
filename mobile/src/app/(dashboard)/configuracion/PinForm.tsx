@@ -51,8 +51,8 @@ export function PinForm({ pinConfigurado, bloqueoActivado, huellaActivada, onCam
       <div className="space-y-3">
         <p className="text-sm text-slate-600">
           {pinConfigurado
-            ? "Ya tenés un PIN de acceso configurado."
-            : `Definí un PIN de ${LARGO_PIN} números para poder activar el bloqueo de la aplicación.`}
+            ? "Ya tienes un PIN de acceso configurado."
+            : `Define un PIN de ${LARGO_PIN} números para poder activar el bloqueo de la aplicación.`}
         </p>
 
         {mostrarCambioPin ? (

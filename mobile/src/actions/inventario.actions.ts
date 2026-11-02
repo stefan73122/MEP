@@ -23,7 +23,7 @@ export async function registrarMovimiento(
     return { error: "El producto no existe o está inactivo" };
   }
   if (producto.perecedero) {
-    return { error: "Este producto maneja lotes: registrá el movimiento desde la sección de lotes" };
+    return { error: "Este producto maneja lotes: registra el movimiento desde la sección de lotes" };
   }
 
   let cantidadIngresada: number;
@@ -81,7 +81,7 @@ export async function registrarMovimiento(
       });
     });
   } catch {
-    return { error: "No se pudo registrar el movimiento. Intentá de nuevo." };
+    return { error: "No se pudo registrar el movimiento. Intenta de nuevo." };
   }
 
   return { exito: true };

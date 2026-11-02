@@ -93,7 +93,7 @@ export function LoginForm({ onDesbloqueado }: { onDesbloqueado?: () => void } = 
       <div className="flex flex-col items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element -- sin optimización de imágenes, es una export estática sin servidor */}
         <img src="/logo-mip-completo.png" alt="MIP" className="h-40 w-auto object-contain" />
-        <p className="text-sm text-slate-500">Ingresá tu PIN para continuar</p>
+        <p className="text-sm text-slate-500">Ingresa tu PIN para continuar</p>
       </div>
 
       <div className="flex gap-4" aria-hidden="true">

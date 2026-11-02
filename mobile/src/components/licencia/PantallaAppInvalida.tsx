@@ -4,7 +4,7 @@ export function PantallaAppInvalida() {
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-3xl">⚠️</div>
       <h1 className="text-base font-semibold text-slate-900">Aplicación no válida</h1>
       <p className="max-w-xs text-sm text-slate-500">
-        Este instalador fue modificado y no puede usarse. Desinstalá esta copia y volvé a instalar la versión
+        Este instalador fue modificado y no puede usarse. Desinstala esta copia y vuelve a instalar la versión
         original.
       </p>
     </div>

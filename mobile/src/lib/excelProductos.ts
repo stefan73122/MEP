@@ -93,7 +93,7 @@ export async function leerArchivoImportacion(
   try {
     await libro.xlsx.load(buffer as unknown as ExcelJS.Buffer);
   } catch {
-    return { filas: [], error: "No se pudo leer el archivo. Asegurate de subir un Excel (.xlsx) válido." };
+    return { filas: [], error: "No se pudo leer el archivo. Asegúrate de subir un Excel (.xlsx) válido." };
   }
 
   const hoja = libro.worksheets[0];
@@ -153,7 +153,7 @@ export async function leerArchivoImportacion(
         try {
           textoAFecha(fechaVencimientoTexto);
         } catch {
-          errores.push("Fecha de vencimiento inválida (usá dd/mm/aaaa)");
+          errores.push("Fecha de vencimiento inválida (usa dd/mm/aaaa)");
         }
       }
     }

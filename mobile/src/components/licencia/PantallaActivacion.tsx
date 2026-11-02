@@ -49,7 +49,7 @@ export function PantallaActivacion({ codigoDispositivo, onActivada }: Props) {
         <img src="/logo-mip-completo.png" alt="MIP" className="h-28 w-auto object-contain" />
         <h1 className="text-base font-semibold text-slate-900">Activación requerida</h1>
         <p className="max-w-xs text-sm text-slate-500">
-          Compartí el código de este dispositivo con quien te vendió la app para recibir tu clave de activación.
+          Comparte el código de este dispositivo con quien te vendió la app para recibir tu clave de activación.
         </p>
       </div>
 

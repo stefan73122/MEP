@@ -61,7 +61,7 @@ export async function crearServicio(
     return { id };
   } catch (error) {
     if (error instanceof ErrorRestriccionUnica) return { error: "Ya existe un servicio con ese nombre" };
-    return { error: "No se pudo guardar el servicio. Intentá de nuevo." };
+    return { error: "No se pudo guardar el servicio. Intenta de nuevo." };
   }
 }
 
@@ -95,7 +95,7 @@ export async function actualizarServicio(
       });
     });
   } catch {
-    return { error: "No se pudo guardar el servicio. Intentá de nuevo." };
+    return { error: "No se pudo guardar el servicio. Intenta de nuevo." };
   }
   return { exito: true };
 }

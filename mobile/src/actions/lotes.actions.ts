@@ -75,7 +75,7 @@ export async function registrarEntradaLote(
       });
     });
   } catch {
-    return { error: "No se pudo registrar el lote. Intentá de nuevo." };
+    return { error: "No se pudo registrar el lote. Intenta de nuevo." };
   }
 
   return { exito: true };
@@ -207,7 +207,7 @@ export async function ajustarLote(
       });
     });
   } catch {
-    return { error: "No se pudo ajustar el lote. Intentá de nuevo." };
+    return { error: "No se pudo ajustar el lote. Intenta de nuevo." };
   }
 
   return { exito: true };

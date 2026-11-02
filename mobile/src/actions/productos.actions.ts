@@ -55,7 +55,7 @@ export async function crearProducto(
   let fechaVencimientoInicial: Date | undefined;
   if (datos.perecedero && stockInicial > 0) {
     if (!datos.fechaVencimientoInicialTexto) {
-      return { error: "Ingresá la fecha de vencimiento del primer lote" };
+      return { error: "Ingresa la fecha de vencimiento del primer lote" };
     }
     // Se permite una fecha ya pasada a propósito (ver registrarEntradaLote).
     try {
@@ -112,7 +112,7 @@ export async function crearProducto(
       return producto.id;
     });
   } catch {
-    return { error: "No se pudo guardar el producto. Intentá de nuevo." };
+    return { error: "No se pudo guardar el producto. Intenta de nuevo." };
   }
 
   return { id: productoId };
@@ -171,7 +171,7 @@ export async function actualizarProducto(
       });
     });
   } catch {
-    return { error: "No se pudo actualizar el producto. Intentá de nuevo." };
+    return { error: "No se pudo actualizar el producto. Intenta de nuevo." };
   }
 
   return { id: datos.id };

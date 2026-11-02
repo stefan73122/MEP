@@ -290,7 +290,7 @@ export function NuevoProductoForm() {
             defaultValue={fechaDeBorrador(valores.fechaVencimientoInicialTexto)}
           />
           <p className="mt-1 text-xs text-slate-500">
-            Hace falta solo si cargás una cantidad en &quot;Cantidad del primer lote&quot;. Después vas a
+            Hace falta solo si cargas una cantidad en &quot;Cantidad del primer lote&quot;. Después vas a
             poder agregar más lotes desde la ficha del producto.
           </p>
         </div>

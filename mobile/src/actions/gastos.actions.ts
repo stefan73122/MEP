@@ -39,7 +39,7 @@ export async function registrarGasto(
       });
     });
   } catch {
-    return { error: "No se pudo registrar el gasto. Intentá de nuevo." };
+    return { error: "No se pudo registrar el gasto. Intenta de nuevo." };
   }
 
   return { exito: true };

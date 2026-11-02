@@ -47,7 +47,7 @@ export function NotificacionesForm() {
       const resultado = await accion();
       setMensaje(resultado.ok ? { tipo: "exito", texto: textoExito } : { tipo: "error", texto: resultado.error });
     } catch {
-      setMensaje({ tipo: "error", texto: "No se pudo completar. Intentá de nuevo." });
+      setMensaje({ tipo: "error", texto: "No se pudo completar. Intenta de nuevo." });
     } finally {
       setOcupado(false);
     }
@@ -57,7 +57,7 @@ export function NotificacionesForm() {
     if (!config) return;
     const cada = Number(cadaTexto);
     if (config.unidad !== "dia" && (!Number.isInteger(cada) || cada < 1)) {
-      setMensaje({ tipo: "error", texto: "Indicá cada cuánto se repite con un número entero mayor a 0." });
+      setMensaje({ tipo: "error", texto: "Indica cada cuánto se repite con un número entero mayor a 0." });
       return;
     }
     const nueva = config.unidad === "dia" ? config : { ...config, cada };

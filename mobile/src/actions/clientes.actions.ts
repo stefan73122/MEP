@@ -24,7 +24,7 @@ export async function crearClienteRapido(
 
   const nombreLimpio = nombre.trim();
   if (!nombreLimpio) {
-    return { error: "Ingresá el nombre del cliente" };
+    return { error: "Ingresa el nombre del cliente" };
   }
 
   let limiteCredito: number;
@@ -53,7 +53,7 @@ export async function crearClienteRapido(
 
     return { cliente: { id: cliente.id, nombre: cliente.nombre } };
   } catch {
-    return { error: "No se pudo crear el cliente. Intentá de nuevo." };
+    return { error: "No se pudo crear el cliente. Intenta de nuevo." };
   }
 }
 
@@ -99,7 +99,7 @@ export async function crearCliente(
 
     return { id: clienteId };
   } catch {
-    return { error: "No se pudo guardar el cliente. Intentá de nuevo." };
+    return { error: "No se pudo guardar el cliente. Intenta de nuevo." };
   }
 }
 
@@ -146,7 +146,7 @@ export async function actualizarCliente(
       });
     });
   } catch {
-    return { error: "No se pudo actualizar el cliente. Intentá de nuevo." };
+    return { error: "No se pudo actualizar el cliente. Intenta de nuevo." };
   }
 
   return { id: datos.id };
@@ -226,7 +226,7 @@ export async function registrarPago(
       });
     });
   } catch {
-    return { error: "No se pudo registrar el pago. Intentá de nuevo." };
+    return { error: "No se pudo registrar el pago. Intenta de nuevo." };
   }
 
   return { exito: true };

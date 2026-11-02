@@ -20,7 +20,7 @@ export default function ImportarProductosPage() {
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         );
       } catch {
-        setErrorDescarga("No se pudo generar la plantilla. Intentá de nuevo.");
+        setErrorDescarga("No se pudo generar la plantilla. Intenta de nuevo.");
       }
     });
   }
@@ -31,7 +31,7 @@ export default function ImportarProductosPage() {
 
       <div className="rounded-xl bg-white p-4 text-sm text-slate-600">
         <p className="mb-2">
-          1. Descargá la plantilla, completala con tus productos y subila de vuelta. Vas a poder revisar
+          1. Descarga la plantilla, complétala con tus productos y súbela de vuelta. Vas a poder revisar
           todo antes de que se guarde nada.
         </p>
         <button

@@ -51,7 +51,7 @@ export function NuevoClienteForm() {
           required
           className={clasesInput}
         />
-        <p className="mt-1 text-xs text-slate-500">Poné 0 si este cliente no va a comprar a crédito.</p>
+        <p className="mt-1 text-xs text-slate-500">Pon 0 si este cliente no va a comprar a crédito.</p>
       </div>
 
       {estado.error && (

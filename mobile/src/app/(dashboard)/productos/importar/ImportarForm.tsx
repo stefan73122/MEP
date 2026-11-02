@@ -41,7 +41,7 @@ export function ImportarForm() {
           datos.set("archivo", entrante);
           startTransition(() => previewAction(datos));
         })
-        .catch(() => setErrorEntrante("No se pudo abrir el archivo recibido. Probá elegirlo desde acá."));
+        .catch(() => setErrorEntrante("No se pudo abrir el archivo recibido. Intenta elegirlo desde aquí."));
     };
 
     cargarEntrante();
@@ -85,7 +85,7 @@ export function ImportarForm() {
   return (
     <div className="space-y-3">
       <form action={previewAction} className="space-y-3 rounded-xl bg-white p-4">
-        <p className="text-sm font-medium text-slate-700">2. Elegí tu archivo Excel (.xlsx)</p>
+        <p className="text-sm font-medium text-slate-700">2. Elige tu archivo Excel (.xlsx)</p>
 
         {archivo && (
           <div className="flex items-center gap-2 rounded-lg border border-success-500 bg-green-50 px-3 py-2 text-sm">
@@ -128,7 +128,7 @@ export function ImportarForm() {
       {filas && (
         <>
           <div className="rounded-xl bg-white p-4">
-            <p className="text-sm font-medium text-slate-700">3. Revisá los productos</p>
+            <p className="text-sm font-medium text-slate-700">3. Revisa los productos</p>
             <p className="text-sm text-slate-600">
               {filasValidas.length} de {filas.length} filas están listas para subir.
             </p>
