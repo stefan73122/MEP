@@ -8,6 +8,7 @@ import { centavosATexto } from "@/lib/money";
 import { fechaHoraATexto, finDelDia, inicioDelDia, textoAFecha } from "@/lib/dates";
 import type { Cliente, VentaConCliente } from "@/lib/db/types";
 import { CampoFecha } from "@/components/forms/CampoFecha";
+import { etiquetaRegistro, useTipoNegocio } from "@/lib/tipoNegocio";
 
 function intentarParsear(texto: string | undefined): Date | undefined {
   if (!texto) return undefined;
@@ -26,6 +27,7 @@ const ETIQUETAS_FORMA_PAGO: Record<string, string> = {
 
 function VentasContenido() {
   const searchParams = useSearchParams();
+  const { textos } = useTipoNegocio();
   const desde = searchParams.get("desde") ?? undefined;
   const hasta = searchParams.get("hasta") ?? undefined;
   const clienteId = searchParams.get("clienteId") ?? undefined;
@@ -79,12 +81,12 @@ function VentasContenido() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold text-slate-900">Ventas</h1>
+        <h1 className="text-lg font-semibold text-slate-900">{textos.Ventas}</h1>
         <Link
           href="/ventas/nueva"
           className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:brightness-110"
         >
-          + Nueva venta
+          {textos.nuevaVenta}
         </Link>
       </div>
 
@@ -130,7 +132,7 @@ function VentasContenido() {
       </form>
 
       {ventas.length === 0 ? (
-        <p className="rounded-lg bg-white p-4 text-sm text-slate-500">No se encontraron ventas con estos filtros.</p>
+        <p className="rounded-lg bg-white p-4 text-sm text-slate-500">No se encontraron {textos.ventas} con estos filtros.</p>
       ) : (
         <ul className="space-y-2">
           {ventas.map((venta) => (
@@ -141,7 +143,7 @@ function VentasContenido() {
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-900">
-                    Venta #{venta.id} · {venta.cliente?.nombre ?? "Cliente ocasional"}
+                    {etiquetaRegistro(venta)} #{venta.id} · {venta.cliente?.nombre ?? "Cliente ocasional"}
                   </p>
                   <p className="text-xs text-slate-500">
                     {fechaHoraATexto(venta.fecha)} · {ETIQUETAS_FORMA_PAGO[venta.formaPago] ?? venta.formaPago}

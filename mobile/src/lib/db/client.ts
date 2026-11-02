@@ -12,12 +12,15 @@ import {
   type Pago,
   type PagoVenta,
   type Producto,
+  type Servicio,
   type TipoMovimiento,
+  type TipoNegocio,
   type Venta,
   type VentaConCliente,
   type VentaConPagos,
   type VentaDetalle,
   type VentaItemConProducto,
+  type VentaServicioConServicio,
 } from "./types";
 
 async function ejecutar(sql: string, params: unknown[] = []): Promise<{ lastId: number; changes: number }> {
@@ -88,10 +91,25 @@ function mapCliente(f: FilaCliente): Cliente {
 type FilaVenta = {
   id: number; clienteId: number | null; fecha: number; subtotal: number; descuento: number; total: number;
   formaPago: FormaPago; estado: "COMPLETADA" | "ANULADA"; motivoAnulacion: string | null;
-  createdAt: number; updatedAt: number;
+  nota: string | null; createdAt: number; updatedAt: number; cantidadServicios?: number | null;
 };
 function mapVenta(f: FilaVenta): Venta {
-  return { ...f, fecha: new Date(f.fecha), createdAt: new Date(f.createdAt), updatedAt: new Date(f.updatedAt) };
+  return {
+    ...f,
+    nota: f.nota ?? null,
+    cantidadServicios: f.cantidadServicios ?? 0,
+    fecha: new Date(f.fecha),
+    createdAt: new Date(f.createdAt),
+    updatedAt: new Date(f.updatedAt),
+  };
+}
+
+type FilaServicio = {
+  id: number; nombre: string; precio: number; duracionMinutos: number | null; descripcion: string | null;
+  activo: number; createdAt: number; updatedAt: number;
+};
+function mapServicio(f: FilaServicio): Servicio {
+  return { ...f, activo: !!f.activo, createdAt: new Date(f.createdAt), updatedAt: new Date(f.updatedAt) };
 }
 
 type FilaPago = { id: number; clienteId: number; monto: number; fecha: number; observacion: string | null; createdAt: number };
@@ -107,11 +125,16 @@ function mapGasto(f: FilaGasto): Gasto {
 type FilaConfiguracion = {
   id: number; nombreNegocio: string; moneda: string; simboloMoneda: string; pinHash: string | null;
   diasAlertaVencimiento: number; bloqueoActivado: number; huellaActivada: number;
-  licenciaActivada: number; licenciaCodigoDispositivo: string | null; updatedAt: number;
+  licenciaActivada: number; licenciaCodigoDispositivo: string | null;
+  tipoNegocio: string | null; onboardingVersion: number | null; updatedAt: number;
 };
 function mapConfiguracion(f: FilaConfiguracion): Configuracion {
   return {
     ...f,
+    // Cualquier otro valor (no debería haberlo) cuenta como "sin elegir", así
+    // se vuelve a preguntar en vez de quedar en un modo desconocido.
+    tipoNegocio: f.tipoNegocio === "tienda" || f.tipoNegocio === "servicios" ? f.tipoNegocio : null,
+    onboardingVersion: f.onboardingVersion ?? null,
     bloqueoActivado: !!f.bloqueoActivado,
     huellaActivada: !!f.huellaActivada,
     licenciaActivada: !!f.licenciaActivada,
@@ -198,6 +221,13 @@ const producto = {
 
   // Para el tablero: sólo el conteo, agregado en SQLite (no trae los productos
   // a memoria para contarlos en JS) — tiene que ser rápido con miles de filas.
+  // Para el Inicio en modo servicios: las alertas de stock y vencimientos
+  // solo se muestran si el negocio cargó algún producto.
+  async contarActivos(): Promise<number> {
+    const filas = await consultar<{ cantidad: number }>("SELECT COUNT(*) as cantidad FROM Producto WHERE activo = 1");
+    return filas[0]?.cantidad ?? 0;
+  },
+
   async contarStockBajo(): Promise<number> {
     const filas = await consultar<{ cantidad: number }>(
       "SELECT COUNT(*) as cantidad FROM Producto WHERE activo = 1 AND stockActual < stockMinimo",
@@ -428,7 +458,8 @@ const venta = {
     const orden = opciones?.orderBy === "asc" ? "ASC" : "DESC";
     const limite = opciones?.take ? ` LIMIT ${opciones.take}` : "";
     const filas = await consultar<FilaVenta>(
-      `SELECT * FROM Venta ${where} ORDER BY fecha ${orden}${limite}`,
+      `SELECT v.*, (SELECT COUNT(*) FROM VentaServicio vs WHERE vs.ventaId = v.id) as cantidadServicios
+       FROM Venta v ${where} ORDER BY fecha ${orden}${limite}`,
       params,
     );
     return filas.map(mapVenta);
@@ -484,17 +515,35 @@ const venta = {
       precioUnitario: f.precioUnitario, descuento: f.descuento, subtotal: f.subtotal,
       producto: { nombre: f.pNombre, unidadMedida: f.pUnidad, factorConversion: f.pFactor, precioCompra: f.pCompra },
     }));
-    return { ...v, cliente: c, items };
+    const filasServicios = await consultar<{
+      id: number; ventaId: number; servicioId: number; cantidad: number; precioUnitario: number;
+      descuento: number; subtotal: number; sNombre: string;
+    }>(
+      `SELECT vs.*, s.nombre as sNombre
+       FROM VentaServicio vs JOIN Servicio s ON s.id = vs.servicioId
+       WHERE vs.ventaId = ?`,
+      [id],
+    );
+    const servicios: VentaServicioConServicio[] = filasServicios.map((f) => ({
+      id: f.id, ventaId: f.ventaId, servicioId: f.servicioId, cantidad: f.cantidad,
+      precioUnitario: f.precioUnitario, descuento: f.descuento, subtotal: f.subtotal,
+      servicio: { nombre: f.sNombre },
+    }));
+    return { ...v, cliente: c, items, servicios };
   },
 
   async create(data: {
     clienteId: number | null; subtotal: number; descuento: number; total: number; formaPago: FormaPago;
+    nota?: string | null;
   }): Promise<Venta> {
     const ahora = Date.now();
     const { lastId } = await ejecutar(
-      `INSERT INTO Venta (clienteId, fecha, subtotal, descuento, total, formaPago, estado, createdAt, updatedAt)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-      [data.clienteId, ahora, data.subtotal, data.descuento, data.total, data.formaPago, "COMPLETADA", ahora, ahora],
+      `INSERT INTO Venta (clienteId, fecha, subtotal, descuento, total, formaPago, estado, nota, createdAt, updatedAt)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      [
+        data.clienteId, ahora, data.subtotal, data.descuento, data.total, data.formaPago, "COMPLETADA",
+        data.nota ?? null, ahora, ahora,
+      ],
     );
     const creada = await venta.findUnique(lastId);
     if (!creada) throw new Error("No se pudo leer la venta recién creada");
@@ -521,6 +570,25 @@ const venta = {
       [desde.getTime(), hasta.getTime()],
     );
     return filas.map((f) => ({ formaPago: f.formaPago, cantidad: f.cantidad, total: f.total ?? 0 }));
+  },
+
+  // Para reportes: por cada venta completada del rango, su total y cuánto de
+  // eso vino de productos y de servicios (sumas de los subtotales por ítem,
+  // antes del descuento general — el reparto lo hace lib/reportes.ts).
+  async ingresosPorTipoEnRango(
+    desde: Date,
+    hasta: Date,
+  ): Promise<{ id: number; fecha: Date; total: number; productos: number; servicios: number }[]> {
+    const filas = await consultar<{ id: number; fecha: number; total: number; productos: number; servicios: number }>(
+      `SELECT v.id, v.fecha, v.total,
+         COALESCE((SELECT SUM(vi.subtotal) FROM VentaItem vi WHERE vi.ventaId = v.id), 0) as productos,
+         COALESCE((SELECT SUM(vs.subtotal) FROM VentaServicio vs WHERE vs.ventaId = v.id), 0) as servicios
+       FROM Venta v
+       WHERE v.estado = 'COMPLETADA' AND v.fecha >= ? AND v.fecha <= ?
+       ORDER BY v.fecha ASC`,
+      [desde.getTime(), hasta.getTime()],
+    );
+    return filas.map((f) => ({ ...f, fecha: new Date(f.fecha) }));
   },
 
   // Para el tablero: saldo de fiado pendiente sumando TODOS los clientes, en
@@ -568,6 +636,106 @@ const ventaItem = {
       precioUnitario: f.precioUnitario, descuento: f.descuento, subtotal: f.subtotal,
       producto: { nombre: f.pNombre, unidadMedida: f.pUnidad, factorConversion: f.pFactor, precioCompra: f.pCompra },
     }));
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Servicio / VentaServicio
+// ---------------------------------------------------------------------------
+
+const servicio = {
+  async findMany(where?: { activo?: boolean; idIn?: number[] }): Promise<Servicio[]> {
+    const condiciones: string[] = [];
+    const params: unknown[] = [];
+    if (where?.activo !== undefined) {
+      condiciones.push("activo = ?");
+      params.push(b(where.activo));
+    }
+    if (where?.idIn) {
+      if (where.idIn.length === 0) return [];
+      condiciones.push(`id IN (${where.idIn.map(() => "?").join(",")})`);
+      params.push(...where.idIn);
+    }
+    const filas = await consultar<FilaServicio>(
+      `SELECT * FROM Servicio${condiciones.length ? ` WHERE ${condiciones.join(" AND ")}` : ""} ORDER BY nombre COLLATE NOCASE ASC`,
+      params,
+    );
+    return filas.map(mapServicio);
+  },
+
+  async findUnique(id: number): Promise<Servicio | null> {
+    const filas = await consultar<FilaServicio>("SELECT * FROM Servicio WHERE id = ?", [id]);
+    return filas[0] ? mapServicio(filas[0]) : null;
+  },
+
+  async findByNombre(nombre: string): Promise<Servicio | null> {
+    const filas = await consultar<FilaServicio>("SELECT * FROM Servicio WHERE nombre = ? COLLATE NOCASE", [nombre]);
+    return filas[0] ? mapServicio(filas[0]) : null;
+  },
+
+  async create(data: {
+    nombre: string; precio: number; duracionMinutos: number | null; descripcion: string | null;
+  }): Promise<Servicio> {
+    const ahora = Date.now();
+    const { lastId } = await ejecutar(
+      `INSERT INTO Servicio (nombre, precio, duracionMinutos, descripcion, activo, createdAt, updatedAt)
+       VALUES (?,?,?,?,?,?,?)`,
+      [data.nombre, data.precio, data.duracionMinutos, data.descripcion, 1, ahora, ahora],
+    );
+    const creado = await servicio.findUnique(lastId);
+    if (!creado) throw new Error("No se pudo leer el servicio recién creado");
+    return creado;
+  },
+
+  async update(
+    id: number,
+    data: Partial<{
+      nombre: string; precio: number; duracionMinutos: number | null; descripcion: string | null; activo: boolean;
+    }>,
+  ): Promise<void> {
+    const campos: string[] = [];
+    const params: unknown[] = [];
+    if (data.nombre !== undefined) { campos.push("nombre = ?"); params.push(data.nombre); }
+    if (data.precio !== undefined) { campos.push("precio = ?"); params.push(data.precio); }
+    if (data.duracionMinutos !== undefined) { campos.push("duracionMinutos = ?"); params.push(data.duracionMinutos); }
+    if (data.descripcion !== undefined) { campos.push("descripcion = ?"); params.push(data.descripcion); }
+    if (data.activo !== undefined) { campos.push("activo = ?"); params.push(b(data.activo)); }
+    campos.push("updatedAt = ?");
+    params.push(Date.now());
+    params.push(id);
+    await ejecutar(`UPDATE Servicio SET ${campos.join(", ")} WHERE id = ?`, params);
+  },
+};
+
+const ventaServicio = {
+  async create(data: {
+    ventaId: number; servicioId: number; cantidad: number; precioUnitario: number; descuento: number; subtotal: number;
+  }): Promise<void> {
+    await ejecutar(
+      "INSERT INTO VentaServicio (ventaId, servicioId, cantidad, precioUnitario, descuento, subtotal) VALUES (?,?,?,?,?,?)",
+      [data.ventaId, data.servicioId, data.cantidad, data.precioUnitario, data.descuento, data.subtotal],
+    );
+  },
+
+  // Para reportes: servicios más realizados en el rango (ventas completadas),
+  // agregado en SQLite.
+  async rankingEnRango(
+    desde: Date,
+    hasta: Date,
+    limite: number,
+  ): Promise<{ servicioId: number; nombre: string; cantidad: number; monto: number }[]> {
+    return consultar<{ servicioId: number; nombre: string; cantidad: number; monto: number }>(
+      `SELECT vs.servicioId as servicioId, s.nombre as nombre,
+         SUM(vs.cantidad) as cantidad, SUM(vs.subtotal) as monto
+       FROM VentaServicio vs
+       JOIN Venta v ON v.id = vs.ventaId
+       JOIN Servicio s ON s.id = vs.servicioId
+       WHERE v.estado = 'COMPLETADA' AND v.fecha >= ? AND v.fecha <= ?
+       GROUP BY vs.servicioId, s.nombre
+       ORDER BY cantidad DESC, monto DESC
+       LIMIT ?`,
+      [desde.getTime(), hasta.getTime(), limite],
+    );
   },
 };
 
@@ -667,6 +835,7 @@ const configuracion = {
       nombreNegocio: string; moneda: string; simboloMoneda: string; pinHash: string | null; diasAlertaVencimiento: number;
       bloqueoActivado: boolean; huellaActivada: boolean;
       licenciaActivada: boolean; licenciaCodigoDispositivo: string | null;
+      tipoNegocio: TipoNegocio; onboardingVersion: number;
     }>,
   ): Promise<void> {
     const campos: string[] = [];
@@ -680,6 +849,8 @@ const configuracion = {
     if (data.huellaActivada !== undefined) { campos.push("huellaActivada = ?"); params.push(b(data.huellaActivada)); }
     if (data.licenciaActivada !== undefined) { campos.push("licenciaActivada = ?"); params.push(b(data.licenciaActivada)); }
     if (data.licenciaCodigoDispositivo !== undefined) { campos.push("licenciaCodigoDispositivo = ?"); params.push(data.licenciaCodigoDispositivo); }
+    if (data.tipoNegocio !== undefined) { campos.push("tipoNegocio = ?"); params.push(data.tipoNegocio); }
+    if (data.onboardingVersion !== undefined) { campos.push("onboardingVersion = ?"); params.push(data.onboardingVersion); }
     campos.push("updatedAt = ?");
     params.push(Date.now());
     params.push(id);
@@ -713,6 +884,8 @@ export type Db = {
   cliente: typeof cliente;
   venta: typeof venta;
   ventaItem: typeof ventaItem;
+  servicio: typeof servicio;
+  ventaServicio: typeof ventaServicio;
   pago: typeof pago;
   pagoVenta: typeof pagoVenta;
   gasto: typeof gasto;
@@ -731,6 +904,8 @@ export const db: Db = {
   cliente,
   venta,
   ventaItem,
+  servicio,
+  ventaServicio,
   pago,
   pagoVenta,
   gasto,

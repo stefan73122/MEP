@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { db } from "@/lib/db/client";
 import { DIAS_ALERTA_VENCIMIENTO_DEFECTO } from "@/lib/constants";
-import { PANTALLAS_PRINCIPALES } from "@/lib/pantallasPrincipales";
+import { usePantallasPrincipales } from "@/lib/pantallasPrincipales";
 import { IconAlertaBandera } from "@/components/ui/icons";
 import { usePagerContext } from "@/components/pager/PagerContext";
 import { useTecladoAbierto } from "@/lib/useTecladoAbierto";
@@ -21,6 +21,7 @@ export function NavBar() {
   const pathname = usePathname();
   const pager = usePagerContext();
   const tecladoAbierto = useTecladoAbierto();
+  const PANTALLAS_PRINCIPALES = usePantallasPrincipales();
   const [alertas, setAlertas] = useState({ productos: false, clientes: false });
 
   useEffect(() => {

@@ -11,7 +11,8 @@ import { NavBar } from "@/components/layout/NavBar";
 import { LogoutButton } from "@/components/layout/LogoutButton";
 import { IconAjustes } from "@/components/ui/icons";
 import { PagerPrincipal } from "@/components/pager/PagerPrincipal";
-import { PANTALLAS_PRINCIPALES } from "@/lib/pantallasPrincipales";
+import { usePantallasPrincipales } from "@/lib/pantallasPrincipales";
+import { TipoNegocioGate } from "@/components/layout/TipoNegocioGate";
 import { sincronizarAlertas } from "@/lib/sincronizarAlertas";
 import { reprogramarNotificaciones } from "@/lib/notificaciones";
 import { App } from "@capacitor/app";
@@ -34,7 +35,6 @@ function useEsMobile(): boolean {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const esMobile = useEsMobile();
   const [bloqueoActivo, setBloqueoActivo] = useState(false);
 
@@ -69,16 +69,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => observer.disconnect();
   }, []);
 
-  // El carrusel solo reemplaza el contenido en las 5 rutas principales; las
-  // sub-rutas (detalle, nuevo, configuración, la lista de ventas...) siguen
-  // navegando normal, tal cual hoy.
-  const esRutaDelCarrusel = PANTALLAS_PRINCIPALES.some((p) => p.href === pathname);
-  const usarCarrusel = esMobile && esRutaDelCarrusel;
-
   return (
     <AuthGate>
       <AbrirArchivoEntrante />
       <AbrirDesdeNotificacion />
+      <TipoNegocioGate>
       <div className="flex min-h-screen flex-col md:flex-row">
         <NavBar />
 
@@ -103,10 +98,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </header>
 
           <main className="flex-1 px-4 py-4 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-4">
-            {usarCarrusel ? <PagerPrincipal /> : children}
+            <ContenidoPrincipal esMobile={esMobile}>{children}</ContenidoPrincipal>
           </main>
         </div>
       </div>
+      </TipoNegocioGate>
     </AuthGate>
   );
+}
+
+// El carrusel solo reemplaza el contenido en las 5 rutas principales (que
+// dependen del tipo de negocio, por eso va dentro de TipoNegocioGate); las
+// sub-rutas (detalle, nuevo, configuración, la lista de ventas...) siguen
+// navegando normal, tal cual hoy.
+function ContenidoPrincipal({ esMobile, children }: { esMobile: boolean; children: React.ReactNode }) {
+  const pathname = usePathname();
+  const pantallas = usePantallasPrincipales();
+  const esRutaDelCarrusel = pantallas.some((p) => p.href === pathname);
+  return esMobile && esRutaDelCarrusel ? <PagerPrincipal /> : <>{children}</>;
 }

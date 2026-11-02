@@ -10,12 +10,18 @@ import {
   type ProductoBusquedaVenta,
 } from "@/actions/ventas.actions";
 import { crearClienteRapido } from "@/actions/clientes.actions";
-import { centavosATexto, textoACentavos } from "@/lib/money";
+import { centavosATexto, centavosATextoEditable, textoACentavos } from "@/lib/money";
 import { textoAUnidadesMinimas } from "@/lib/stock";
 import { inicioDelDia, textoAFecha } from "@/lib/dates";
 import type { FormaPago } from "@/lib/constants";
-import { IconAlertaTriangulo, IconBuscar } from "@/components/ui/icons";
-import { borrarBorrador, guardarBorradorConDemora, type BorradorVenta } from "@/lib/borradorVenta";
+import { IconAlertaTriangulo, IconBuscar, IconServicios } from "@/components/ui/icons";
+import {
+  borrarBorrador,
+  guardarBorradorConDemora,
+  type BorradorVenta,
+  type ServicioBorrador,
+} from "@/lib/borradorVenta";
+import { useTipoNegocio } from "@/lib/tipoNegocio";
 
 const ESTADO_INICIAL: EstadoVentaForm = {};
 
@@ -52,6 +58,29 @@ function loteVencido(proximoVencimiento: string | null): boolean {
 
 type ClienteOpcion = { id: number; nombre: string };
 
+export type ServicioOpcion = { id: number; nombre: string; precio: number; duracionMinutos: number | null };
+
+type ItemServicio = ServicioBorrador;
+
+function calcularBrutoServicio(item: ItemServicio): number {
+  try {
+    const cantidad = Number(item.cantidadTexto.trim().replace(",", "."));
+    if (!Number.isInteger(cantidad) || cantidad <= 0) return 0;
+    return textoACentavos(item.precioTexto) * cantidad;
+  } catch {
+    return 0;
+  }
+}
+
+function calcularDescuentoServicio(item: ItemServicio): number {
+  if (!item.descuentoTexto.trim()) return 0;
+  try {
+    return textoACentavos(item.descuentoTexto);
+  } catch {
+    return 0;
+  }
+}
+
 const FORMAS: { valor: FormaPago; etiqueta: React.ReactNode }[] = [
   { valor: "EFECTIVO", etiqueta: "Efectivo" },
   // Abreviado en dos líneas (igual que el diseño de referencia): en una sola
@@ -71,6 +100,7 @@ const FORMAS: { valor: FormaPago; etiqueta: React.ReactNode }[] = [
 
 type Props = {
   clientes: ClienteOpcion[];
+  servicios: ServicioOpcion[];
   simbolo: string;
   borradorInicial?: BorradorVenta | null;
 };
@@ -93,9 +123,16 @@ function calcularDescuentoItem(item: ItemCarrito): number {
   }
 }
 
-export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
+export function VentaForm({ clientes, servicios, simbolo, borradorInicial }: Props) {
   const router = useRouter();
+  const { tipo, textos } = useTipoNegocio();
+  const modoServicios = tipo === "servicios";
   const [estado, formAction, enviando] = useActionState(crearVenta, ESTADO_INICIAL);
+
+  // Atención (modo servicios): servicios elegidos, con precio editable.
+  const [serviciosCarrito, setServiciosCarrito] = useState<ItemServicio[]>(() => borradorInicial?.servicios ?? []);
+  const [nota, setNota] = useState(() => borradorInicial?.nota ?? "");
+  const [queryServicio, setQueryServicio] = useState("");
 
   const [query, setQuery] = useState("");
   const [resultados, setResultados] = useState<ProductoBusquedaVenta[]>([]);
@@ -121,6 +158,11 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
   const [errorNuevoProducto, setErrorNuevoProducto] = useState<string | null>(null);
   const [creandoProducto, iniciarCreacionProducto] = useTransition();
 
+  // En modo servicios los productos van en segundo plano: el buscador se
+  // abre a pedido (o ya abierto si la atención tiene productos).
+  const [mostrarProductos, setMostrarProductos] = useState(() => (borradorInicial?.carrito.length ?? 0) > 0);
+  const buscadorProductosVisible = !modoServicios || mostrarProductos || carrito.length > 0;
+
   useEffect(() => {
     if (estado.id) {
       borrarBorrador();
@@ -131,11 +173,20 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
   // Venta a medio registrar: se guarda en el dispositivo para no perderla al
   // cambiar de pantalla (swipe) ni si el sistema interrumpe la app.
   useEffect(() => {
-    guardarBorradorConDemora({ carrito, clienteId, formaPago, descuentoTotalTexto });
-  }, [carrito, clienteId, formaPago, descuentoTotalTexto]);
+    guardarBorradorConDemora({
+      carrito,
+      clienteId,
+      formaPago,
+      descuentoTotalTexto,
+      servicios: serviciosCarrito,
+      nota,
+    });
+  }, [carrito, clienteId, formaPago, descuentoTotalTexto, serviciosCarrito, nota]);
 
   function vaciarCarrito() {
     setCarrito([]);
+    setServiciosCarrito([]);
+    setNota("");
     setClienteId("");
     setFormaPago("EFECTIVO");
     setDescuentoTotalTexto("");
@@ -146,7 +197,7 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
     // Si cambia el cliente o el carrito, cualquier confirmación de exceso de
     // crédito anterior queda obsoleta.
     if (confirmarExcesoRef.current) confirmarExcesoRef.current.value = "";
-  }, [clienteId, carrito]);
+  }, [clienteId, carrito, serviciosCarrito]);
 
   useEffect(() => {
     const q = query.trim();
@@ -255,6 +306,38 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
     });
   }
 
+  function agregarServicio(servicio: ServicioOpcion) {
+    setServiciosCarrito((prev) => {
+      const existente = prev.find((item) => item.servicioId === servicio.id);
+      if (!existente) {
+        return [
+          ...prev,
+          {
+            servicioId: servicio.id,
+            nombre: servicio.nombre,
+            precioSugerido: servicio.precio,
+            precioTexto: centavosATextoEditable(servicio.precio),
+            cantidadTexto: "1",
+            descuentoTexto: "",
+          },
+        ];
+      }
+      const valorActual = Number(existente.cantidadTexto) || 0;
+      return prev.map((item) =>
+        item.servicioId === servicio.id ? { ...item, cantidadTexto: String(valorActual + 1) } : item,
+      );
+    });
+    setQueryServicio("");
+  }
+
+  function actualizarServicio(servicioId: number, cambios: Partial<ItemServicio>) {
+    setServiciosCarrito((prev) => prev.map((item) => (item.servicioId === servicioId ? { ...item, ...cambios } : item)));
+  }
+
+  function quitarServicio(servicioId: number) {
+    setServiciosCarrito((prev) => prev.filter((item) => item.servicioId !== servicioId));
+  }
+
   function actualizarItem(productoId: number, cambios: Partial<ItemCarrito>) {
     setCarrito((prev) => prev.map((item) => (item.productoId === productoId ? { ...item, ...cambios } : item)));
   }
@@ -263,10 +346,17 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
     setCarrito((prev) => prev.filter((item) => item.productoId !== productoId));
   }
 
-  const hayDescuentoPorItem = carrito.some((item) => calcularDescuentoItem(item) > 0);
+  const hayDescuentoPorItem =
+    carrito.some((item) => calcularDescuentoItem(item) > 0) ||
+    serviciosCarrito.some((item) => calcularDescuentoServicio(item) > 0);
   const hayDescuentoTotal = descuentoTotalTexto.trim() !== "" && descuentoTotalTexto.trim() !== "0";
 
-  const subtotalVenta = useMemo(() => carrito.reduce((acc, item) => acc + calcularBruto(item), 0), [carrito]);
+  const subtotalVenta = useMemo(
+    () =>
+      carrito.reduce((acc, item) => acc + calcularBruto(item), 0) +
+      serviciosCarrito.reduce((acc, item) => acc + calcularBrutoServicio(item), 0),
+    [carrito, serviciosCarrito],
+  );
   const descuentoFinal = useMemo(() => {
     if (hayDescuentoTotal) {
       try {
@@ -275,8 +365,11 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
         return 0;
       }
     }
-    return carrito.reduce((acc, item) => acc + calcularDescuentoItem(item), 0);
-  }, [carrito, descuentoTotalTexto, hayDescuentoTotal]);
+    return (
+      carrito.reduce((acc, item) => acc + calcularDescuentoItem(item), 0) +
+      serviciosCarrito.reduce((acc, item) => acc + calcularDescuentoServicio(item), 0)
+    );
+  }, [carrito, serviciosCarrito, descuentoTotalTexto, hayDescuentoTotal]);
   const total = Math.max(0, subtotalVenta - descuentoFinal);
 
   const itemsJson = JSON.stringify(
@@ -287,15 +380,147 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
     })),
   );
 
+  const serviciosJson = JSON.stringify(
+    serviciosCarrito.map((item) => ({
+      servicioId: item.servicioId,
+      precioTexto: item.precioTexto,
+      cantidadTexto: item.cantidadTexto,
+      descuentoTexto: item.descuentoTexto,
+    })),
+  );
+
+  const qServicio = queryServicio.trim().toLowerCase();
+  const serviciosSugeridos = servicios
+    .filter((servicio) => !qServicio || servicio.nombre.toLowerCase().includes(qServicio))
+    .slice(0, qServicio ? 15 : 8);
+
   const faltaClienteParaCredito = formaPago === "CREDITO" && !clienteId;
-  const puedeEnviar = carrito.length > 0 && !faltaClienteParaCredito && !enviando;
+  const hayAlgo = carrito.length > 0 || serviciosCarrito.length > 0;
+  const puedeEnviar = hayAlgo && !faltaClienteParaCredito && !enviando;
   const sinResultados = query.trim() !== "" && !buscando && resultados.length === 0;
 
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="itemsJson" value={itemsJson} readOnly />
+      <input type="hidden" name="serviciosJson" value={serviciosJson} readOnly />
       <input type="hidden" name="confirmarExcesoCredito" ref={confirmarExcesoRef} defaultValue="" />
 
+      {modoServicios && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Servicios</label>
+          {servicios.length === 0 ? (
+            <p className="mt-1 rounded-lg bg-slate-50 p-3 text-sm text-slate-500">
+              Todavía no cargaste servicios. Agregalos desde la pestaña Servicios.
+            </p>
+          ) : (
+            <>
+              {servicios.length > 8 && (
+                <div className="relative mt-1">
+                  <IconBuscar className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-primary-500" />
+                  <input
+                    type="text"
+                    value={queryServicio}
+                    onChange={(e) => setQueryServicio(e.target.value)}
+                    placeholder="Buscar servicio"
+                    className={`${clasesInput} pl-9`}
+                  />
+                </div>
+              )}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {serviciosSugeridos.map((servicio) => (
+                  <button
+                    key={servicio.id}
+                    type="button"
+                    onClick={() => agregarServicio(servicio)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm hover:border-primary-500"
+                  >
+                    <IconServicios className="h-4 w-4 text-slate-500" />
+                    <span className="font-medium text-slate-900">{servicio.nombre}</span>
+                    <span className="text-xs text-slate-500">{centavosATexto(servicio.precio, simbolo)}</span>
+                  </button>
+                ))}
+                {serviciosSugeridos.length === 0 && (
+                  <p className="text-sm text-slate-500">No se encontró ningún servicio.</p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {serviciosCarrito.length > 0 && (
+        <div data-swipe-ignorar="true">
+          <span className="text-sm font-medium text-slate-700">
+            Servicios elegidos ({serviciosCarrito.length})
+          </span>
+          <ul className="mt-2 space-y-2">
+            {serviciosCarrito.map((item) => (
+              <li key={item.servicioId} className="rounded-lg border border-slate-200 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 truncate text-sm font-medium text-slate-900">{item.nombre}</p>
+                  <button
+                    type="button"
+                    onClick={() => quitarServicio(item.servicioId)}
+                    className="shrink-0 text-xs font-medium text-danger-600 hover:underline"
+                  >
+                    Quitar
+                  </button>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <div className="flex flex-col justify-end">
+                    <label className="block text-xs text-slate-500">Precio</label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={item.precioTexto}
+                      onChange={(e) => actualizarServicio(item.servicioId, { precioTexto: e.target.value })}
+                      className={`mt-1 ${clasesInput}`}
+                    />
+                  </div>
+                  <div className="flex flex-col justify-end">
+                    <label className="block text-xs text-slate-500">Cantidad</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={item.cantidadTexto}
+                      onChange={(e) => actualizarServicio(item.servicioId, { cantidadTexto: e.target.value })}
+                      className={`mt-1 ${clasesInput}`}
+                    />
+                  </div>
+                  <div className="flex flex-col justify-end">
+                    <label className="block text-xs text-slate-500">Descuento</label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={item.descuentoTexto}
+                      disabled={hayDescuentoTotal}
+                      onChange={(e) => actualizarServicio(item.servicioId, { descuentoTexto: e.target.value })}
+                      className={`mt-1 ${clasesInput} disabled:bg-slate-100 disabled:text-slate-400`}
+                    />
+                  </div>
+                </div>
+                <p className="mt-1 text-right text-sm font-medium text-slate-900">
+                  {centavosATexto(calcularBrutoServicio(item) - calcularDescuentoServicio(item), simbolo)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {!buscadorProductosVisible && (
+        <button
+          type="button"
+          onClick={() => setMostrarProductos(true)}
+          className="w-full rounded-lg border border-dashed border-slate-300 px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+        >
+          + Agregar producto
+        </button>
+      )}
+
+      {buscadorProductosVisible && (
+      <>
       <div className="relative">
         <label className="block text-sm font-medium text-slate-700">Buscar producto</label>
         <div className="relative mt-1">
@@ -432,7 +657,9 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
 
       <div data-swipe-ignorar="true">
       {carrito.length === 0 ? (
-        <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Todavía no agregaste productos.</p>
+        !modoServicios && (
+          <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Todavía no agregaste productos.</p>
+        )
       ) : (
         <>
         <div className="flex items-center justify-between">
@@ -506,6 +733,24 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
         </>
       )}
       </div>
+      </>
+      )}
+
+      {modoServicios && serviciosCarrito.length === 0 && carrito.length === 0 && servicios.length > 0 && (
+        <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Tocá un servicio para agregarlo.</p>
+      )}
+
+      {modoServicios && hayAlgo && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={vaciarCarrito}
+            className="text-xs font-medium text-danger-600 hover:underline"
+          >
+            Empezar de nuevo
+          </button>
+        </div>
+      )}
 
       <div>
         <div className="flex items-center justify-between">
@@ -625,7 +870,8 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
         </div>
         {faltaClienteParaCredito && (
           <p className="mt-2 flex items-center gap-2 rounded-lg bg-danger-500/10 px-3 py-2 text-xs font-medium text-danger-600">
-            <IconAlertaTriangulo className="h-4 w-4" /> Elegí un cliente para vender a crédito.
+            <IconAlertaTriangulo className="h-4 w-4" /> Elegí un cliente para{" "}
+            {modoServicios ? "registrar a crédito" : "vender a crédito"}.
           </p>
         )}
       </fieldset>
@@ -648,6 +894,24 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
           </p>
         )}
       </div>
+
+      {(modoServicios || nota) && (
+        <div>
+          <label htmlFor="nota" className="block text-sm font-medium text-slate-700">
+            Nota (opcional)
+          </label>
+          <textarea
+            id="nota"
+            name="nota"
+            rows={2}
+            maxLength={300}
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+            placeholder={modoServicios ? "Ej: color 6.1, volver en 3 semanas" : ""}
+            className={`mt-1 ${clasesInput}`}
+          />
+        </div>
+      )}
 
       <div className="space-y-1 rounded-xl bg-slate-50 p-3 text-sm">
         <div className="flex justify-between text-slate-600">
@@ -679,7 +943,7 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
           }}
           className="w-full rounded-lg border border-danger-600 px-4 py-2.5 font-medium text-danger-600 transition hover:bg-red-50 disabled:opacity-60"
         >
-          {enviando ? "Registrando..." : "Vender igual"}
+          {enviando ? "Registrando..." : textos.confirmarIgual}
         </button>
       ) : (
         <button
@@ -687,7 +951,7 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
           disabled={!puedeEnviar}
           className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:brightness-110 disabled:opacity-60"
         >
-          {enviando ? "Registrando..." : "Confirmar venta"}
+          {enviando ? "Registrando..." : textos.confirmarVenta}
         </button>
       )}
     </form>

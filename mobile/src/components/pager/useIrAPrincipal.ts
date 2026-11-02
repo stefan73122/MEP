@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { usePantallasPrincipales } from "@/lib/pantallasPrincipales";
 import { usePagerContext, type FiltroPantalla } from "./PagerContext";
 
 // Serializa un filtro simple {clave: string|boolean} al mismo formato de
@@ -26,9 +27,12 @@ function aQueryString(filtro?: FiltroPantalla): string {
 export function useIrAPrincipal() {
   const router = useRouter();
   const pager = usePagerContext();
+  const pantallas = usePantallasPrincipales();
 
   return (ruta: string, filtroInicial?: FiltroPantalla) => {
-    if (pager) {
+    // El carrusel solo puede llevar el filtro a sus propias pantallas: en modo
+    // servicios Productos no es una de ellas, así que va por la URL.
+    if (pager && pantallas.some((p) => p.href === ruta)) {
       pager.irA(ruta, filtroInicial);
     } else {
       router.push(`${ruta}${aQueryString(filtroInicial)}`);

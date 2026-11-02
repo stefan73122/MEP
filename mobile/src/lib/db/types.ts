@@ -2,6 +2,11 @@
 // de la raíz del repo). Las fechas se guardan como epoch ms en SQLite y se
 // exponen aquí ya convertidas a Date, igual que las devolvía Prisma.
 
+// "tienda": tienda de abarrotes (productos, como siempre). "servicios":
+// peluquería, taller, manicure... (servicios primero, productos en segundo
+// plano). Null hasta que el usuario lo elige en la pantalla de bienvenida.
+export type TipoNegocio = "tienda" | "servicios";
+
 export type Configuracion = {
   id: number;
   nombreNegocio: string;
@@ -13,6 +18,8 @@ export type Configuracion = {
   huellaActivada: boolean;
   licenciaActivada: boolean;
   licenciaCodigoDispositivo: string | null;
+  tipoNegocio: TipoNegocio | null;
+  onboardingVersion: number | null;
   updatedAt: Date;
 };
 
@@ -82,8 +89,12 @@ export type Venta = {
   formaPago: FormaPago;
   estado: EstadoVenta;
   motivoAnulacion: string | null;
+  nota: string | null;
   createdAt: Date;
   updatedAt: Date;
+  // Cuántos servicios tiene (0 = venta solo de productos). Una venta con
+  // servicios es una "atención", sin importar el modo en que esté la app.
+  cantidadServicios: number;
 };
 
 export type VentaItem = {
@@ -102,7 +113,34 @@ export type VentaItemConProducto = VentaItem & {
 
 export type VentaConPagos = Venta & { pagosAplicados: PagoVenta[] };
 export type VentaConCliente = Venta & { cliente: Cliente | null };
-export type VentaDetalle = Venta & { cliente: Cliente | null; items: VentaItemConProducto[] };
+export type VentaDetalle = Venta & {
+  cliente: Cliente | null;
+  items: VentaItemConProducto[];
+  servicios: VentaServicioConServicio[];
+};
+
+export type Servicio = {
+  id: number;
+  nombre: string;
+  precio: number;
+  duracionMinutos: number | null;
+  descripcion: string | null;
+  activo: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type VentaServicio = {
+  id: number;
+  ventaId: number;
+  servicioId: number;
+  cantidad: number;
+  precioUnitario: number;
+  descuento: number;
+  subtotal: number;
+};
+
+export type VentaServicioConServicio = VentaServicio & { servicio: Pick<Servicio, "nombre"> };
 
 export type Pago = {
   id: number;

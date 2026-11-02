@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { PANTALLAS_PRINCIPALES } from "@/lib/pantallasPrincipales";
+import { usePantallasPrincipales } from "@/lib/pantallasPrincipales";
 import { PagerContext, type FiltroPantalla } from "./PagerContext";
 
 const DURACION_MS = 200;
@@ -50,8 +50,8 @@ type EstadoGesto = {
 };
 type FiltroPendiente = { href: string; filtro: FiltroPantalla; nonce: number } | null;
 
-function indicesAMontar(activo: number): number[] {
-  return [activo - 1, activo, activo + 1].filter((i) => i >= 0 && i < PANTALLAS_PRINCIPALES.length);
+function indicesAMontar(activo: number, total: number): number[] {
+  return [activo - 1, activo, activo + 1].filter((i) => i >= 0 && i < total);
 }
 
 // El motor de gestos del carrusel entre las 5 pantallas principales.
@@ -79,6 +79,7 @@ function indicesAMontar(activo: number): number[] {
 export function PagerPrincipal() {
   const router = useRouter();
   const pathname = usePathname();
+  const PANTALLAS_PRINCIPALES = usePantallasPrincipales();
 
   const [indiceActivo, setIndiceActivo] = useState(() => {
     const i = PANTALLAS_PRINCIPALES.findIndex((p) => p.href === pathname);
@@ -327,7 +328,7 @@ export function PagerPrincipal() {
   // --- Todo lo visual sale de acá, recalculado en cada render. La ventana
   // montada depende SOLO de `indiceActivo`, que a su vez solo cambia cuando
   // ya no hay ninguna animación corriendo (ver el comentario grande arriba).
-  const montados = indicesAMontar(indiceActivo);
+  const montados = indicesAMontar(indiceActivo, PANTALLAS_PRINCIPALES.length);
   const posicionActivaEnTrack = montados.indexOf(indiceActivo);
   const progreso = anchoContenedor > 0 ? -arrastrePx / anchoContenedor : 0;
   const centro = posicionActivaEnTrack - progreso;

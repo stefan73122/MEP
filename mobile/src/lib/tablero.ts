@@ -11,6 +11,7 @@ export type ResumenTablero = {
   fiadoPendienteTotal: number;
   productosPorVencer: number;
   productosStockBajo: number;
+  productosActivos: number;
 };
 
 // Todo agregado en SQLite (SUM/COUNT/GROUP BY): ninguna de estas consultas
@@ -19,11 +20,12 @@ export type ResumenTablero = {
 export async function obtenerResumenTablero(db: Db): Promise<ResumenTablero> {
   const ahora = new Date();
 
-  const [configuracion, porFormaPago, fiadoPendienteTotal, productosStockBajo] = await Promise.all([
+  const [configuracion, porFormaPago, fiadoPendienteTotal, productosStockBajo, productosActivos] = await Promise.all([
     db.configuracion.findFirst(),
     db.venta.resumenPorFormaPagoEnRango(inicioDelDia(ahora), finDelDia(ahora)),
     db.venta.saldoPendienteTotalCredito(),
     db.producto.contarStockBajo(),
+    db.producto.contarActivos(),
   ]);
 
   const diasAlerta = configuracion?.diasAlertaVencimiento ?? DIAS_ALERTA_VENCIMIENTO_DEFECTO;
@@ -39,5 +41,6 @@ export async function obtenerResumenTablero(db: Db): Promise<ResumenTablero> {
     fiadoPendienteTotal,
     productosPorVencer,
     productosStockBajo,
+    productosActivos,
   };
 }

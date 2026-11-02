@@ -10,6 +10,7 @@ import {
   anularVentaSchema,
   crearVentaSchema,
   itemsVentaArraySchema,
+  serviciosVentaArraySchema,
 } from "@/validations/venta.schema";
 
 export type EstadoVentaForm = { error?: string; requiereConfirmacion?: boolean; id?: number };
@@ -151,31 +152,44 @@ export async function crearVenta(
   if (!resultado.success) {
     return { error: resultado.error.issues[0]?.message ?? "Datos inválidos" };
   }
-  const { clienteId, formaPago, descuentoTotalTexto, itemsJson, confirmarExcesoCredito } = resultado.data;
+  const { clienteId, formaPago, descuentoTotalTexto, itemsJson, serviciosJson, nota, confirmarExcesoCredito } =
+    resultado.data;
 
   let itemsCrudos: unknown;
+  let serviciosCrudos: unknown;
   try {
     itemsCrudos = JSON.parse(itemsJson);
+    serviciosCrudos = JSON.parse(serviciosJson);
   } catch {
     return { error: "El carrito no es válido" };
   }
   const itemsResultado = itemsVentaArraySchema.safeParse(itemsCrudos);
   if (!itemsResultado.success) {
-    return { error: itemsResultado.error.issues[0]?.message ?? "Agregá al menos un producto" };
+    return { error: itemsResultado.error.issues[0]?.message ?? "El carrito no es válido" };
   }
   const items = itemsResultado.data;
+  const serviciosResultado = serviciosVentaArraySchema.safeParse(serviciosCrudos);
+  if (!serviciosResultado.success) {
+    return { error: serviciosResultado.error.issues[0]?.message ?? "Los servicios no son válidos" };
+  }
+  const serviciosPedidos = serviciosResultado.data;
 
-  const hayDescuentoPorItem = items.some(
-    (item) => item.descuentoTexto && item.descuentoTexto.trim() !== "" && item.descuentoTexto.trim() !== "0",
-  );
+  if (items.length === 0 && serviciosPedidos.length === 0) {
+    return { error: "Agregá al menos un producto o servicio" };
+  }
+
+  const tieneDescuento = (texto: string | undefined) => !!texto && texto.trim() !== "" && texto.trim() !== "0";
+  const hayDescuentoPorItem =
+    items.some((item) => tieneDescuento(item.descuentoTexto)) ||
+    serviciosPedidos.some((item) => tieneDescuento(item.descuentoTexto));
   const hayDescuentoTotal =
     !!descuentoTotalTexto && descuentoTotalTexto.trim() !== "" && descuentoTotalTexto.trim() !== "0";
   if (hayDescuentoPorItem && hayDescuentoTotal) {
-    return { error: "Usá descuento por producto o descuento al total, no los dos a la vez" };
+    return { error: "Usá descuento por ítem o descuento al total, no los dos a la vez" };
   }
 
   if (formaPago === "CREDITO" && !clienteId) {
-    return { error: "Elegí un cliente para registrar una venta a crédito" };
+    return { error: "Elegí un cliente para registrar a crédito" };
   }
 
   let descuentoTotalCentavos = 0;
@@ -264,13 +278,74 @@ export async function crearVenta(
     });
   }
 
+  type ServicioProcesado = {
+    servicioId: number;
+    cantidad: number;
+    precioUnitario: number;
+    descuento: number;
+    subtotal: number;
+  };
+  const serviciosProcesados: ServicioProcesado[] = [];
+  const serviciosPorId = new Map(
+    (await db.servicio.findMany({ idIn: serviciosPedidos.map((s) => s.servicioId) })).map((s) => [s.id, s]),
+  );
+
+  for (const pedido of serviciosPedidos) {
+    const servicio = serviciosPorId.get(pedido.servicioId);
+    if (!servicio || !servicio.activo) {
+      return { error: "Uno de los servicios ya no está disponible" };
+    }
+
+    let precioUnitario: number;
+    try {
+      precioUnitario = textoACentavos(pedido.precioTexto);
+    } catch (error) {
+      return { error: `${servicio.nombre}: ${(error as Error).message}` };
+    }
+    if (precioUnitario < 0) {
+      return { error: `${servicio.nombre}: el precio no puede ser negativo` };
+    }
+
+    const cantidad = Number(pedido.cantidadTexto.trim().replace(",", "."));
+    if (!Number.isInteger(cantidad) || cantidad <= 0) {
+      return { error: `${servicio.nombre}: la cantidad tiene que ser un número entero mayor a cero` };
+    }
+
+    let descuento = 0;
+    if (tieneDescuento(pedido.descuentoTexto)) {
+      try {
+        descuento = textoACentavos(pedido.descuentoTexto!);
+      } catch (error) {
+        return { error: `${servicio.nombre}: ${(error as Error).message}` };
+      }
+    }
+    if (descuento < 0) {
+      return { error: `${servicio.nombre}: el descuento no puede ser negativo` };
+    }
+
+    const bruto = precioUnitario * cantidad;
+    if (descuento > bruto) {
+      return { error: `${servicio.nombre}: el descuento no puede superar el importe del servicio` };
+    }
+
+    subtotalVenta += bruto;
+    serviciosProcesados.push({
+      servicioId: servicio.id,
+      cantidad,
+      precioUnitario,
+      descuento,
+      subtotal: bruto - descuento,
+    });
+  }
+
   if (descuentoTotalCentavos > subtotalVenta) {
-    return { error: "El descuento no puede superar el subtotal de la venta" };
+    return { error: "El descuento no puede superar el subtotal" };
   }
 
   const descuentoFinal = hayDescuentoTotal
     ? descuentoTotalCentavos
-    : itemsProcesados.reduce((acc, item) => acc + item.descuento, 0);
+    : itemsProcesados.reduce((acc, item) => acc + item.descuento, 0) +
+      serviciosProcesados.reduce((acc, item) => acc + item.descuento, 0);
   const total = subtotalVenta - descuentoFinal;
 
   if (formaPago === "CREDITO" && clienteId) {
@@ -281,7 +356,7 @@ export async function crearVenta(
     const saldoActual = await calcularSaldoPendiente(db, clienteId);
     if (saldoActual + total > cliente.limiteCredito && confirmarExcesoCredito !== "1") {
       return {
-        error: `${cliente.nombre} va a superar su límite de crédito con esta venta. Confirmá si querés venderle igual.`,
+        error: `${cliente.nombre} va a superar su límite de crédito con esto. Confirmá si querés registrarlo igual.`,
         requiereConfirmacion: true,
       };
     }
@@ -296,7 +371,12 @@ export async function crearVenta(
         descuento: descuentoFinal,
         total,
         formaPago,
+        nota: nota ?? null,
       });
+
+      for (const item of serviciosProcesados) {
+        await tx.ventaServicio.create({ ventaId: venta.id, ...item });
+      }
 
       for (const item of itemsProcesados) {
         await tx.ventaItem.create({
@@ -341,13 +421,19 @@ export async function crearVenta(
         entidad: "Venta",
         entidadId: venta.id,
         accion: "CREAR",
-        detalle: { total, formaPago, clienteId: clienteId ?? null, items: itemsProcesados.length },
+        detalle: {
+          total,
+          formaPago,
+          clienteId: clienteId ?? null,
+          items: itemsProcesados.length,
+          servicios: serviciosProcesados.length,
+        },
       });
 
       return venta.id;
     });
   } catch {
-    return { error: "No se pudo registrar la venta. Intentá de nuevo." };
+    return { error: "No se pudo registrar. Intentá de nuevo." };
   }
 
   return { id: ventaId };

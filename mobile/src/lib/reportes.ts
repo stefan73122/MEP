@@ -123,12 +123,22 @@ export async function obtenerProductosMasVendidos(
     .slice(0, limite);
 }
 
-export type GananciaEstimada = { ingresos: number; costoEstimado: number; ganancia: number };
+// `ingresos` y `costoEstimado` son de productos. Los servicios no tienen
+// costo cargado: lo cobrado por ellos (`ingresosServicios`) suma entero.
+export type GananciaEstimada = {
+  ingresos: number;
+  costoEstimado: number;
+  ingresosServicios: number;
+  ganancia: number;
+};
 
 // "Estimada" porque se calcula con el precio de compra ACTUAL del producto,
 // no con el que tenía en el momento de cada venta (no se guarda historial de costos).
 export async function calcularGananciaEstimada(db: Db, desde: Date, hasta: Date): Promise<GananciaEstimada> {
-  const items = await db.ventaItem.findConProductoEnRango(desde, hasta);
+  const [items, servicios] = await Promise.all([
+    db.ventaItem.findConProductoEnRango(desde, hasta),
+    db.ventaServicio.rankingEnRango(desde, hasta, -1),
+  ]);
 
   let ingresos = 0;
   let costoEstimado = 0;
@@ -136,8 +146,9 @@ export async function calcularGananciaEstimada(db: Db, desde: Date, hasta: Date)
     ingresos += item.subtotal;
     costoEstimado += Math.round((item.producto.precioCompra * item.cantidad) / item.producto.factorConversion);
   }
+  const ingresosServicios = servicios.reduce((acc, s) => acc + s.monto, 0);
 
-  return { ingresos, costoEstimado, ganancia: ingresos - costoEstimado };
+  return { ingresos, costoEstimado, ingresosServicios, ganancia: ingresos - costoEstimado + ingresosServicios };
 }
 
 export function obtenerGastos(db: Db, desde: Date, hasta: Date) {
@@ -172,4 +183,54 @@ export async function obtenerResumenHoy(db: Db): Promise<ResumenHoy> {
     else if (venta.formaPago === "CREDITO") resumen.credito += venta.total;
   }
   return resumen;
+}
+
+// ---------------------------------------------------------------------------
+// Servicios vs. productos
+// ---------------------------------------------------------------------------
+
+export type IngresoPorTipo = { fecha: Date; total: number; servicios: number; productos: number };
+
+// Cuánto de cada venta/atención fue por servicios y cuánto por productos. El
+// descuento general (al total) se reparte en proporción a lo que pesa cada
+// parte; el redondeo se lo lleva productos, así las dos partes suman
+// exactamente el total cobrado.
+export async function obtenerIngresosPorTipo(db: Db, desde: Date, hasta: Date): Promise<IngresoPorTipo[]> {
+  const filas = await db.venta.ingresosPorTipoEnRango(desde, hasta);
+  return filas.map((fila) => {
+    const bruto = fila.productos + fila.servicios;
+    if (bruto <= 0) return { fecha: fila.fecha, total: fila.total, servicios: 0, productos: fila.total };
+    const descuentoGeneral = Math.max(0, bruto - fila.total);
+    const servicios = fila.servicios - Math.round((descuentoGeneral * fila.servicios) / bruto);
+    return { fecha: fila.fecha, total: fila.total, servicios, productos: fila.total - servicios };
+  });
+}
+
+export type DesgloseGrupo = { claveOrden: string; servicios: number; productos: number };
+
+// Mismas claves que agruparVentasPorDia / agruparVentasPorMes, para poder
+// mostrar el desglose al lado de cada grupo.
+export function desglosarPorGrupo(ingresos: IngresoPorTipo[], porMes: boolean): Map<string, DesgloseGrupo> {
+  const mapa = new Map<string, DesgloseGrupo>();
+  for (const ingreso of ingresos) {
+    const clave = porMes ? claveMes(ingreso.fecha) : claveDia(ingreso.fecha);
+    const actual = mapa.get(clave) ?? { claveOrden: clave, servicios: 0, productos: 0 };
+    actual.servicios += ingreso.servicios;
+    actual.productos += ingreso.productos;
+    mapa.set(clave, actual);
+  }
+  return mapa;
+}
+
+export type ServicioMasRealizado = { servicioId: number; nombre: string; cantidad: number; monto: number };
+
+// Ranking por cantidad de veces realizado (a diferencia de los productos,
+// que se ordenan por monto: acá todos se cuentan en la misma unidad).
+export function obtenerServiciosMasRealizados(
+  db: Db,
+  desde: Date,
+  hasta: Date,
+  limite = 10,
+): Promise<ServicioMasRealizado[]> {
+  return db.ventaServicio.rankingEnRango(desde, hasta, limite);
 }

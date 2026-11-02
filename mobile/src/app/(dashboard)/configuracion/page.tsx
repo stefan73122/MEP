@@ -9,6 +9,7 @@ import { LicenciaInfo } from "./LicenciaInfo";
 import { NotificacionesForm } from "./NotificacionesForm";
 import { PinForm } from "./PinForm";
 import { TemaForm } from "./TemaForm";
+import { TipoNegocioForm } from "./TipoNegocioForm";
 
 export default function ConfiguracionPage() {
   const [cargando, setCargando] = useState(true);
@@ -44,6 +45,11 @@ export default function ConfiguracionPage() {
           diasAlertaVencimiento={configuracion?.diasAlertaVencimiento ?? DIAS_ALERTA_VENCIMIENTO_DEFECTO}
           onExito={recargar}
         />
+      </div>
+
+      <div className="rounded-xl bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">Tipo de negocio</h2>
+        <TipoNegocioForm />
       </div>
 
       <div className="rounded-xl bg-white p-4">

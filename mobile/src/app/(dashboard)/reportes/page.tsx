@@ -12,13 +12,18 @@ import {
   agruparVentasPorDia,
   agruparVentasPorMes,
   calcularGananciaEstimada,
+  desglosarPorGrupo,
   obtenerGastos,
+  obtenerIngresosPorTipo,
+  obtenerServiciosMasRealizados,
   obtenerProductosMasVendidos,
   obtenerResumenHoy,
   obtenerVentasCompletadas,
   resolverRangoReporte,
   type GananciaEstimada,
   type GrupoVentas,
+  type IngresoPorTipo,
+  type ServicioMasRealizado,
   type ProductoMasVendido,
   type ResumenHoy,
 } from "@/lib/reportes";
@@ -30,6 +35,7 @@ import { IconAlertaTriangulo, IconReloj } from "@/components/ui/icons";
 import { BorrarGastoButton } from "./BorrarGastoButton";
 import { CampoFecha } from "@/components/forms/CampoFecha";
 import { useIrAPrincipal } from "@/components/pager/useIrAPrincipal";
+import { useTipoNegocio } from "@/lib/tipoNegocio";
 
 export type FiltroReportes = { desde?: Date; hasta?: Date; agruparPorMes?: boolean };
 
@@ -38,6 +44,7 @@ export type FiltroReportes = { desde?: Date; hasta?: Date; agruparPorMes?: boole
 // (que solo existe una vez para toda la app).
 export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroReportes }) {
   const irA = useIrAPrincipal();
+  const { tipo, textos } = useTipoNegocio();
 
   const rangoDefecto = resolverRangoReporte(undefined, undefined);
   const [desde, setDesde] = useState<Date>(() => filtroInicial?.desde ?? rangoDefecto.desde);
@@ -49,7 +56,14 @@ export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroRep
   const [resumenHoy, setResumenHoy] = useState<ResumenHoy | null>(null);
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [productosMasVendidos, setProductosMasVendidos] = useState<ProductoMasVendido[]>([]);
-  const [ganancia, setGanancia] = useState<GananciaEstimada>({ ingresos: 0, costoEstimado: 0, ganancia: 0 });
+  const [ganancia, setGanancia] = useState<GananciaEstimada>({
+    ingresos: 0,
+    costoEstimado: 0,
+    ingresosServicios: 0,
+    ganancia: 0,
+  });
+  const [ingresosPorTipo, setIngresosPorTipo] = useState<IngresoPorTipo[]>([]);
+  const [serviciosMasRealizados, setServiciosMasRealizados] = useState<ServicioMasRealizado[]>([]);
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [productosVencidos, setProductosVencidos] = useState(0);
   const [productosPorVencer, setProductosPorVencer] = useState(0);
@@ -64,14 +78,17 @@ export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroRep
       const rangoDesde = inicioDelDia(desde);
       const rangoHasta = finDelDia(hasta);
 
-      const [configuracion, resumen, ventasRango, masVendidos, gananciaCalc, gastosRango] = await Promise.all([
-        db.configuracion.findFirst(),
-        obtenerResumenHoy(db),
-        obtenerVentasCompletadas(db, rangoDesde, rangoHasta),
-        obtenerProductosMasVendidos(db, rangoDesde, rangoHasta),
-        calcularGananciaEstimada(db, rangoDesde, rangoHasta),
-        obtenerGastos(db, rangoDesde, rangoHasta),
-      ]);
+      const [configuracion, resumen, ventasRango, masVendidos, gananciaCalc, gastosRango, porTipo, rankingServicios] =
+        await Promise.all([
+          db.configuracion.findFirst(),
+          obtenerResumenHoy(db),
+          obtenerVentasCompletadas(db, rangoDesde, rangoHasta),
+          obtenerProductosMasVendidos(db, rangoDesde, rangoHasta),
+          calcularGananciaEstimada(db, rangoDesde, rangoHasta),
+          obtenerGastos(db, rangoDesde, rangoHasta),
+          obtenerIngresosPorTipo(db, rangoDesde, rangoHasta),
+          obtenerServiciosMasRealizados(db, rangoDesde, rangoHasta),
+        ]);
       const diasAlerta = configuracion?.diasAlertaVencimiento ?? DIAS_ALERTA_VENCIMIENTO_DEFECTO;
       const [lotesVencidos, lotesPorVencer] = await Promise.all([
         obtenerLotesVencidos(db),
@@ -84,6 +101,8 @@ export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroRep
       setVentas(ventasRango);
       setProductosMasVendidos(masVendidos);
       setGanancia(gananciaCalc);
+      setIngresosPorTipo(porTipo);
+      setServiciosMasRealizados(rankingServicios);
       setGastos(gastosRango);
       setProductosVencidos(new Set(lotesVencidos.map((l) => l.productoId)).size);
       setProductosPorVencer(new Set(lotesPorVencer.map((l) => l.productoId)).size);
@@ -103,6 +122,14 @@ export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroRep
   const gruposVentas: GrupoVentas[] = agruparPorMes ? agruparVentasPorMes(ventas) : agruparVentasPorDia(ventas);
   const totalVentas = ventas.reduce((acc, v) => acc + v.total, 0);
 
+  // Servicios vs. productos: siempre en modo servicios, y en modo tienda si
+  // en el período hay atenciones con servicios (por ejemplo, registradas
+  // antes de pasar a modo tienda) — así nunca se pierden de vista.
+  const totalServicios = ingresosPorTipo.reduce((acc, i) => acc + i.servicios, 0);
+  const totalProductos = ingresosPorTipo.reduce((acc, i) => acc + i.productos, 0);
+  const mostrarDesglose = tipo === "servicios" || totalServicios > 0;
+  const desglose = desglosarPorGrupo(ingresosPorTipo, agruparPorMes);
+
   async function exportarVentasCsv() {
     const filas = ventas.map((venta) => [
       venta.id,
@@ -113,8 +140,8 @@ export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroRep
       centavosATexto(venta.descuento),
       centavosATexto(venta.total),
     ]);
-    const csv = filasACsv(["Venta", "Fecha", "Cliente", "Forma de pago", "Subtotal", "Descuento", "Total"], filas);
-    await guardarTexto("ventas.csv", csv);
+    const csv = filasACsv([textos.Venta, "Fecha", "Cliente", "Forma de pago", "Subtotal", "Descuento", "Total"], filas);
+    await guardarTexto(`${textos.ventas}.csv`, csv);
   }
 
   async function exportarProductosCsv() {
@@ -129,12 +156,33 @@ export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroRep
     await guardarTexto("productos-mas-vendidos.csv", csv);
   }
 
+  async function exportarServiciosCsv() {
+    const filas = serviciosMasRealizados.map((servicio, indice) => [
+      indice + 1,
+      servicio.nombre,
+      servicio.cantidad,
+      centavosATexto(servicio.monto),
+    ]);
+    const csv = filasACsv(["Puesto", "Servicio", "Veces realizado", "Monto"], filas);
+    await guardarTexto("servicios-mas-realizados.csv", csv);
+  }
+
   async function exportarGananciaCsv() {
+    // Sin servicios en el período, el archivo queda igual que siempre.
+    const conServicios = ganancia.ingresosServicios > 0;
     const csv = filasACsv(
-      ["Ingresos", "Costo estimado", "Ganancia estimada", "Gastos", "Ganancia real"],
+      [
+        conServicios ? "Ingresos productos" : "Ingresos",
+        "Costo estimado",
+        ...(conServicios ? ["Ingresos servicios"] : []),
+        "Ganancia estimada",
+        "Gastos",
+        "Ganancia real",
+      ],
       [[
         centavosATexto(ganancia.ingresos),
         centavosATexto(ganancia.costoEstimado),
+        ...(conServicios ? [centavosATexto(ganancia.ingresosServicios)] : []),
         centavosATexto(ganancia.ganancia),
         centavosATexto(totalGastos),
         centavosATexto(gananciaReal),
@@ -179,7 +227,7 @@ export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroRep
         <h2 className="mb-2 text-sm font-semibold">Hoy</h2>
         <p className="text-2xl font-semibold">{centavosATexto(resumenHoy.total, simbolo)}</p>
         <p className="text-sm text-slate-500">
-          {resumenHoy.cantidadVentas} venta{resumenHoy.cantidadVentas === 1 ? "" : "s"}
+          {resumenHoy.cantidadVentas} {resumenHoy.cantidadVentas === 1 ? textos.venta : textos.ventas}
         </p>
         <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
           <div className="rounded-lg bg-white/10 p-2">
@@ -204,7 +252,7 @@ export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroRep
 
       <div className="rounded-xl bg-white p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-slate-900">Ventas</h2>
+          <h2 className="text-sm font-semibold text-slate-900">{textos.Ventas}</h2>
           <button onClick={exportarVentasCsv} type="button" className="text-xs font-medium text-primary-700 hover:underline">
             Exportar CSV
           </button>
@@ -228,25 +276,82 @@ export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroRep
         </div>
 
         <p className="mb-2 text-sm text-slate-600">
-          {ventas.length} venta{ventas.length === 1 ? "" : "s"} · Total{" "}
+          {ventas.length} {ventas.length === 1 ? textos.venta : textos.ventas} · Total{" "}
           <span className="font-semibold text-slate-900">{centavosATexto(totalVentas, simbolo)}</span>
         </p>
 
+        {mostrarDesglose && (
+          <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-lg bg-slate-50 p-2">
+              <p className="text-slate-500">Por servicios</p>
+              <p className="text-sm font-semibold text-slate-900">{centavosATexto(totalServicios, simbolo)}</p>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-2">
+              <p className="text-slate-500">Por productos</p>
+              <p className="text-sm font-semibold text-slate-900">{centavosATexto(totalProductos, simbolo)}</p>
+            </div>
+          </div>
+        )}
+
         {gruposVentas.length === 0 ? (
-          <p className="text-sm text-slate-500">No hay ventas en este período.</p>
+          <p className="text-sm text-slate-500">No hay {textos.ventas} en este período.</p>
         ) : (
           <ul className="space-y-1">
-            {gruposVentas.map((grupo) => (
-              <li key={grupo.claveOrden} className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">
-                  {grupo.etiqueta} ({grupo.cantidadVentas})
-                </span>
-                <span className="font-medium text-slate-900">{centavosATexto(grupo.total, simbolo)}</span>
-              </li>
-            ))}
+            {gruposVentas.map((grupo) => {
+              const partes = desglose.get(grupo.claveOrden);
+              return (
+                <li key={grupo.claveOrden} className="text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600">
+                      {grupo.etiqueta} ({grupo.cantidadVentas})
+                    </span>
+                    <span className="font-medium text-slate-900">{centavosATexto(grupo.total, simbolo)}</span>
+                  </div>
+                  {mostrarDesglose && partes && (
+                    <p className="text-right text-xs text-slate-500">
+                      Servicios {centavosATexto(partes.servicios, simbolo)} · Productos{" "}
+                      {centavosATexto(partes.productos, simbolo)}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
+
+      {mostrarDesglose && (
+        <div className="rounded-xl bg-white p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-slate-900">Servicios más realizados</h2>
+            {serviciosMasRealizados.length > 0 && (
+              <button onClick={exportarServiciosCsv} type="button" className="text-xs font-medium text-primary-700 hover:underline">
+                Exportar CSV
+              </button>
+            )}
+          </div>
+
+          {serviciosMasRealizados.length === 0 ? (
+            <p className="text-sm text-slate-500">No hay servicios realizados en este período.</p>
+          ) : (
+            <ul className="space-y-2">
+              {serviciosMasRealizados.map((servicio, indice) => (
+                <li key={servicio.servicioId} className="flex items-center justify-between gap-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate text-slate-900">
+                      {indice + 1}. {servicio.nombre}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {servicio.cantidad} {servicio.cantidad === 1 ? "vez" : "veces"}
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-medium text-slate-900">{centavosATexto(servicio.monto, simbolo)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="rounded-xl bg-white p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
@@ -289,13 +394,19 @@ export function ReportesContenido({ filtroInicial }: { filtroInicial?: FiltroRep
         </p>
         <div className="space-y-1 text-sm">
           <div className="flex justify-between text-slate-600">
-            <span>Ingresos</span>
+            <span>{ganancia.ingresosServicios > 0 ? "Ingresos por productos" : "Ingresos"}</span>
             <span>{centavosATexto(ganancia.ingresos, simbolo)}</span>
           </div>
           <div className="flex justify-between text-slate-600">
             <span>Costo estimado</span>
             <span>{centavosATexto(ganancia.costoEstimado, simbolo)}</span>
           </div>
+          {ganancia.ingresosServicios > 0 && (
+            <div className="flex justify-between text-slate-600">
+              <span>Ingresos por servicios</span>
+              <span>{centavosATexto(ganancia.ingresosServicios, simbolo)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-slate-600">
             <span>Ganancia estimada</span>
             <span>{centavosATexto(ganancia.ganancia, simbolo)}</span>

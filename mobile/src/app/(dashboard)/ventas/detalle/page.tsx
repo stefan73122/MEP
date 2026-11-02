@@ -9,6 +9,7 @@ import { unidadesMinimasATexto } from "@/lib/stock";
 import { fechaHoraATexto } from "@/lib/dates";
 import type { VentaDetalle } from "@/lib/db/types";
 import { AnularVentaForm } from "./AnularVentaForm";
+import { etiquetaRegistro, useTipoNegocio } from "@/lib/tipoNegocio";
 
 const ETIQUETAS_FORMA_PAGO: Record<string, string> = {
   EFECTIVO: "Efectivo",
@@ -19,6 +20,7 @@ const ETIQUETAS_FORMA_PAGO: Record<string, string> = {
 function VentaDetalleContenido() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { textos } = useTipoNegocio();
   const id = Number(searchParams.get("id"));
 
   const [cargando, setCargando] = useState(true);
@@ -53,16 +55,22 @@ function VentaDetalleContenido() {
 
   if (cargando || !venta) return <p className="text-sm text-slate-500">Cargando...</p>;
 
+  // Cómo se llama depende de lo que tiene (no del modo actual): una venta con
+  // servicios es una atención aunque después se haya pasado a modo tienda.
+  const etiqueta = etiquetaRegistro(venta);
+
   return (
     <div className="mx-auto max-w-lg space-y-4">
       <Link href="/ventas" className="text-sm text-slate-500 hover:underline">
-        ← Ventas
+        ← {textos.Ventas}
       </Link>
 
       <div className="rounded-xl bg-white p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h1 className="text-lg font-semibold text-slate-900">Venta #{venta.id}</h1>
+            <h1 className="text-lg font-semibold text-slate-900">
+              {etiqueta} #{venta.id}
+            </h1>
             <p className="text-xs text-slate-500">{fechaHoraATexto(venta.fecha)}</p>
           </div>
           {venta.estado === "ANULADA" && (
@@ -77,6 +85,10 @@ function VentaDetalleContenido() {
           <p>Forma de pago: {ETIQUETAS_FORMA_PAGO[venta.formaPago] ?? venta.formaPago}</p>
         </div>
 
+        {venta.nota && (
+          <p className="mt-2 rounded-lg bg-slate-50 p-2 text-sm text-slate-600">Nota: {venta.nota}</p>
+        )}
+
         {venta.estado === "ANULADA" && venta.motivoAnulacion && (
           <p className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-danger-600">
             Motivo de anulación: {venta.motivoAnulacion}
@@ -85,7 +97,26 @@ function VentaDetalleContenido() {
       </div>
 
       <div className="rounded-xl bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">Productos</h2>
+        {venta.servicios.length > 0 && (
+          <>
+            <h2 className="mb-3 text-sm font-semibold text-slate-900">Servicios</h2>
+            <ul className="mb-4 space-y-2">
+              {venta.servicios.map((item) => (
+                <li key={item.id} className="flex items-center justify-between gap-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-slate-900">{item.servicio.nombre}</p>
+                    <p className="text-xs text-slate-500">
+                      {item.cantidad} × {centavosATexto(item.precioUnitario, simbolo)}
+                      {item.descuento > 0 && ` · desc. ${centavosATexto(item.descuento, simbolo)}`}
+                    </p>
+                  </div>
+                  <p className="shrink-0 font-medium text-slate-900">{centavosATexto(item.subtotal, simbolo)}</p>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {venta.items.length > 0 && <h2 className="mb-3 text-sm font-semibold text-slate-900">Productos</h2>}
         <ul className="space-y-2">
           {venta.items.map((item) => (
             <li key={item.id} className="flex items-center justify-between gap-2 text-sm">
@@ -120,8 +151,8 @@ function VentaDetalleContenido() {
 
       {venta.estado === "COMPLETADA" && (
         <div className="rounded-xl bg-white p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">Anular venta</h2>
-          <AnularVentaForm ventaId={venta.id} onExito={recargar} />
+          <h2 className="mb-3 text-sm font-semibold text-slate-900">Anular {etiqueta.toLowerCase()}</h2>
+          <AnularVentaForm ventaId={venta.id} etiqueta={etiqueta} onExito={recargar} />
         </div>
       )}
     </div>

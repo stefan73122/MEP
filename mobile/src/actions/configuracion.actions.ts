@@ -4,7 +4,8 @@ import {
   actualizarConfiguracionSchema,
   configurarPinSchema,
 } from "@/validations/configuracion.schema";
-import type { Configuracion } from "@/lib/db/types";
+import type { Configuracion, TipoNegocio } from "@/lib/db/types";
+import { ONBOARDING_VERSION } from "@/lib/tipoNegocio";
 
 export type EstadoConfiguracion = { error?: string; exito?: boolean };
 
@@ -115,4 +116,25 @@ export async function desactivarHuella(): Promise<void> {
 
   const configuracion = await obtenerOCrearConfiguracion();
   await db.$transaction((tx) => tx.configuracion.update(configuracion.id, { huellaActivada: false }));
+}
+
+// Tipo de negocio (pantalla de bienvenida y Configuración). Solo cambia cómo
+// se presenta la app: no toca ni borra productos, ventas, servicios ni
+// clientes, así que se puede cambiar las veces que haga falta.
+export async function guardarTipoNegocio(tipo: TipoNegocio): Promise<EstadoConfiguracion> {
+  await requireAcceso();
+
+  if (tipo !== "tienda" && tipo !== "servicios") {
+    return { error: "Tipo de negocio inválido" };
+  }
+
+  try {
+    const configuracion = await obtenerOCrearConfiguracion();
+    await db.$transaction((tx) =>
+      tx.configuracion.update(configuracion.id, { tipoNegocio: tipo, onboardingVersion: ONBOARDING_VERSION }),
+    );
+  } catch {
+    return { error: "No se pudo guardar el tipo de negocio. Intentá de nuevo." };
+  }
+  return { exito: true };
 }

@@ -7,9 +7,11 @@ import { obtenerResumenTablero, type ResumenTablero } from "@/lib/tablero";
 import { centavosATexto } from "@/lib/money";
 import { IconAlertaTriangulo, IconReloj, IconVentas } from "@/components/ui/icons";
 import { useIrAPrincipal } from "@/components/pager/useIrAPrincipal";
+import { useTipoNegocio } from "@/lib/tipoNegocio";
 
 export default function TableroPage() {
   const irA = useIrAPrincipal();
+  const { tipo, textos } = useTipoNegocio();
   const [cargando, setCargando] = useState(true);
   const [simbolo, setSimbolo] = useState("Bs");
   const [resumen, setResumen] = useState<ResumenTablero | null>(null);
@@ -35,12 +37,15 @@ export default function TableroPage() {
   if (cargando || !resumen) return <p className="text-sm text-slate-500">Cargando...</p>;
 
   const sinVentasHoy = resumen.cantidadVentasHoy === 0;
+  // En modo servicios, las alertas de inventario solo si el negocio también
+  // maneja productos. En modo tienda se muestran siempre, como siempre.
+  const mostrarAlertasInventario = tipo === "tienda" || resumen.productosActivos > 0;
 
   return (
     <div className="space-y-4">
       {/* Total vendido hoy: dato principal */}
       <div className="rounded-xl bg-white p-5 text-center">
-        <p className="text-xs font-medium text-slate-500">Vendido hoy</p>
+        <p className="text-xs font-medium text-slate-500">{textos.vendidoHoy}</p>
         <p className="mt-1 text-4xl font-semibold text-slate-900">{centavosATexto(resumen.totalHoy, simbolo)}</p>
       </div>
 
@@ -62,7 +67,7 @@ export default function TableroPage() {
         className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 hover:border-primary-300"
       >
         <IconVentas className="text-primary-500" />
-        <span className="flex-1 text-sm font-medium text-slate-600">Ventas de hoy</span>
+        <span className="flex-1 text-sm font-medium text-slate-600">{textos.ventasDeHoy}</span>
         <span className="text-lg font-semibold text-slate-900">{resumen.cantidadVentasHoy}</span>
       </Link>
 
@@ -71,7 +76,7 @@ export default function TableroPage() {
           href="/ventas/nueva"
           className="flex h-14 items-center justify-center rounded-full bg-primary-600 px-4 text-base font-medium text-white hover:brightness-110"
         >
-          Registrar una venta
+          {textos.registrarVenta}
         </Link>
       )}
 
@@ -88,6 +93,7 @@ export default function TableroPage() {
       </button>
 
       {/* Alertas: productos por vencer y stock bajo */}
+      {mostrarAlertasInventario && (
       <div className="space-y-2">
         <button
           type="button"
@@ -114,6 +120,7 @@ export default function TableroPage() {
           <span className="text-lg font-semibold">{resumen.productosStockBajo}</span>
         </button>
       </div>
+      )}
     </div>
   );
 }

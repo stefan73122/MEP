@@ -8,6 +8,7 @@ import { centavosATexto, centavosATextoEditable } from "@/lib/money";
 import { fechaATexto } from "@/lib/dates";
 import { calcularSaldoPendiente } from "@/lib/creditos";
 import type { Cliente, Pago, VentaConPagos } from "@/lib/db/types";
+import { etiquetaRegistro, useTipoNegocio } from "@/lib/tipoNegocio";
 import { EditarClienteForm } from "./EditarClienteForm";
 import { EstadoClienteToggle } from "./EstadoClienteToggle";
 import { PagoForm } from "./PagoForm";
@@ -15,6 +16,7 @@ import { PagoForm } from "./PagoForm";
 function ClienteDetalleContenido() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { textos } = useTipoNegocio();
   const id = Number(searchParams.get("id"));
 
   const [cargando, setCargando] = useState(true);
@@ -117,7 +119,7 @@ function ClienteDetalleContenido() {
       )}
 
       <div className="rounded-xl bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">Ventas a crédito</h2>
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">{textos.Ventas} a crédito</h2>
         {ventasCredito.length === 0 ? (
           <p className="text-sm text-slate-500">Este cliente todavía no compró a crédito.</p>
         ) : (
@@ -133,7 +135,7 @@ function ClienteDetalleContenido() {
                   >
                     <div>
                       <p className="font-medium text-slate-900">
-                        Venta #{venta.id} · {fechaATexto(venta.fecha)}
+                        {etiquetaRegistro(venta)} #{venta.id} · {fechaATexto(venta.fecha)}
                       </p>
                       <p className="text-xs text-slate-500">
                         {venta.estado === "ANULADA" ? "Anulada" : "Completada"} · Total: {centavosATexto(venta.total, simbolo)}

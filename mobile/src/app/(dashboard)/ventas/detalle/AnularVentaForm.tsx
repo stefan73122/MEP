@@ -5,7 +5,15 @@ import { anularVenta, type EstadoAnulacion } from "@/actions/ventas.actions";
 
 const ESTADO_INICIAL: EstadoAnulacion = {};
 
-export function AnularVentaForm({ ventaId, onExito }: { ventaId: number; onExito: () => void }) {
+export function AnularVentaForm({
+  ventaId,
+  etiqueta = "Venta",
+  onExito,
+}: {
+  ventaId: number;
+  etiqueta?: "Venta" | "Atención";
+  onExito: () => void;
+}) {
   const [estado, formAction, enviando] = useActionState(anularVenta, ESTADO_INICIAL);
 
   useEffect(() => {
@@ -16,7 +24,7 @@ export function AnularVentaForm({ ventaId, onExito }: { ventaId: number; onExito
   if (estado.exito) {
     return (
       <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-success-500" role="status">
-        Venta anulada correctamente.
+        {etiqueta} anulada correctamente.
       </p>
     );
   }
@@ -49,7 +57,7 @@ export function AnularVentaForm({ ventaId, onExito }: { ventaId: number; onExito
         disabled={enviando}
         className="w-full rounded-lg border border-danger-600 px-4 py-2.5 font-medium text-danger-600 transition hover:bg-red-50 disabled:opacity-60"
       >
-        {enviando ? "Anulando..." : "Anular venta"}
+        {enviando ? "Anulando..." : `Anular ${etiqueta.toLowerCase()}`}
       </button>
     </form>
   );

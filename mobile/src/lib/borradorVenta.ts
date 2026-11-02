@@ -19,11 +19,23 @@ export type ItemBorrador = {
   vencido?: boolean;
 };
 
+export type ServicioBorrador = {
+  servicioId: number;
+  nombre: string;
+  precioSugerido: number;
+  precioTexto: string;
+  cantidadTexto: string;
+  descuentoTexto: string;
+};
+
 export type BorradorVenta = {
   carrito: ItemBorrador[];
   clienteId: string;
   formaPago: FormaPago;
   descuentoTotalTexto: string;
+  // Opcionales: los borradores guardados por versiones anteriores no los traen.
+  servicios?: ServicioBorrador[];
+  nota?: string;
 };
 
 // Venta a medio registrar: se guarda en las preferencias nativas del
