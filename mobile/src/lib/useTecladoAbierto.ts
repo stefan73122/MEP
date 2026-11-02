@@ -16,16 +16,35 @@ export function useTecladoAbierto(): boolean {
     const viewport = window.visualViewport;
     if (!viewport) return;
 
+    // Se compara contra la mayor altura vista, no solo contra
+    // window.innerHeight: en algunos teléfonos el WebView achica TAMBIÉN el
+    // viewport completo al abrir el teclado (innerHeight baja junto con el
+    // visual), la diferencia entre ambos da 0 y la barra inferior quedaba
+    // flotando encima del teclado.
+    let alturaMaxima = 0;
+    let anchoBase = 0;
+
     function actualizar() {
       const vp = window.visualViewport;
       if (!vp) return;
-      const diferencia = window.innerHeight - vp.height;
-      setAbierto(diferencia > UMBRAL_TECLADO_PX);
+      const alto = vp.height * vp.scale;
+      const ancho = Math.round(vp.width * vp.scale);
+      // Al girar el teléfono cambian todas las medidas: se empieza de nuevo.
+      if (ancho !== anchoBase) {
+        anchoBase = ancho;
+        alturaMaxima = 0;
+      }
+      alturaMaxima = Math.max(alturaMaxima, alto, window.innerHeight);
+      setAbierto(alturaMaxima - alto > UMBRAL_TECLADO_PX);
     }
 
     actualizar();
     viewport.addEventListener("resize", actualizar);
-    return () => viewport.removeEventListener("resize", actualizar);
+    window.addEventListener("resize", actualizar);
+    return () => {
+      viewport.removeEventListener("resize", actualizar);
+      window.removeEventListener("resize", actualizar);
+    };
   }, []);
 
   return abierto;

@@ -9,9 +9,16 @@ import { unidadesMinimasATexto } from "@/lib/stock";
 import { DIAS_ALERTA_VENCIMIENTO_DEFECTO } from "@/lib/constants";
 import { obtenerLotesPorVencer, obtenerLotesVencidos } from "@/lib/lotes";
 import type { Producto } from "@/lib/db/types";
+import { alPedirFiltroProductos, tomarFiltroProductosPendiente } from "@/lib/filtroProductosPendiente";
 import { IconAlertaBandera, IconAlertaTriangulo, IconBuscar, IconProductos, IconReloj } from "@/components/ui/icons";
 
-export type FiltroProductos = { q?: string; bajo?: boolean; vencimiento?: "vencido" | "porVencer" };
+export type FiltroProductos = {
+  q?: string;
+  bajo?: boolean;
+  vencimiento?: "vencido" | "porVencer";
+  /** Solo productos con alguna alerta: stock bajo, vencidos o por vencer. */
+  alertas?: boolean;
+};
 
 // Contenido real de la pantalla: estado local, nada de useSearchParams. Así
 // el carrusel de swipe puede montarla como vecina sin pelear por la URL
@@ -20,6 +27,22 @@ export function ProductosContenido({ filtroInicial }: { filtroInicial?: FiltroPr
   const [q, setQ] = useState(filtroInicial?.q ?? "");
   const [bajo, setBajo] = useState(filtroInicial?.bajo ?? false);
   const [vencimiento, setVencimiento] = useState<"vencido" | "porVencer" | undefined>(filtroInicial?.vencimiento);
+  const [alertas, setAlertas] = useState(filtroInicial?.alertas ?? false);
+
+  // Filtro pedido desde fuera de la pantalla (al tocar una notificación):
+  // reemplaza al que hubiera.
+  useEffect(() => {
+    const aplicarPendiente = () => {
+      const pendiente = tomarFiltroProductosPendiente();
+      if (!pendiente) return;
+      setQ(pendiente.q ?? "");
+      setBajo(pendiente.bajo ?? false);
+      setVencimiento(pendiente.vencimiento);
+      setAlertas(pendiente.alertas ?? false);
+    };
+    aplicarPendiente();
+    return alPedirFiltroProductos(aplicarPendiente);
+  }, []);
 
   const [cargando, setCargando] = useState(true);
   const [simbolo, setSimbolo] = useState("Bs");
@@ -59,11 +82,17 @@ export function ProductosContenido({ filtroInicial }: { filtroInicial?: FiltroPr
   if (cargando) return <p className="text-sm text-slate-500">Cargando...</p>;
 
   const totalBajoStock = todosActivos.filter((p) => p.stockActual < p.stockMinimo).length;
+  const tieneAlerta = (p: Producto) =>
+    p.stockActual < p.stockMinimo || productosVencidos.has(p.id) || productosPorVencer.has(p.id);
+  const totalConAlertas = todosActivos.filter(tieneAlerta).length;
 
   let productos = todosActivos;
   if (q) {
     const qNormalizado = q.trim().toLowerCase();
     productos = productos.filter((p) => p.nombre.toLowerCase().includes(qNormalizado));
+  }
+  if (alertas) {
+    productos = productos.filter(tieneAlerta);
   }
   if (bajo) {
     productos = productos.filter((p) => p.stockActual < p.stockMinimo);
@@ -106,6 +135,17 @@ export function ProductosContenido({ filtroInicial }: { filtroInicial?: FiltroPr
       </div>
 
       <div className="flex flex-wrap gap-2">
+        {(alertas || totalConAlertas > 0) && (
+          <button
+            type="button"
+            onClick={() => setAlertas((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${
+              alertas ? "bg-danger-500 text-white" : "bg-red-50 text-danger-600 hover:bg-red-100"
+            }`}
+          >
+            <IconAlertaTriangulo className="h-3.5 w-3.5" /> Con alertas ({totalConAlertas})
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setBajo((v) => !v)}
@@ -147,43 +187,55 @@ export function ProductosContenido({ filtroInicial }: { filtroInicial?: FiltroPr
             const bajoStock = producto.stockActual < producto.stockMinimo;
             const vencido = productosVencidos.has(producto.id);
             const porVencer = productosPorVencer.has(producto.id);
+            // Rojo: vencido o stock bajo. Ámbar: solo por vencer.
+            const alertaRoja = vencido || bajoStock;
+            const alertaAmbar = !alertaRoja && porVencer;
             return (
               <li key={producto.id}>
                 <Link
                   href={`/productos/detalle?id=${producto.id}`}
                   className={`relative flex items-center gap-3 rounded-xl border bg-white p-3 hover:border-primary-300 ${
-                    vencido ? "border-danger-600/40" : porVencer ? "border-warning-500/40" : "border-slate-200"
+                    alertaRoja ? "border-danger-600/40" : alertaAmbar ? "border-warning-500/40" : "border-slate-200"
                   }`}
                 >
-                  {(vencido || porVencer) && (
+                  {(alertaRoja || alertaAmbar) && (
                     <span className="absolute top-[-9px] left-[7px] z-10">
-                      <IconAlertaBandera variante={vencido ? "danger" : "warning"} />
+                      <IconAlertaBandera variante={alertaRoja ? "danger" : "warning"} />
                     </span>
                   )}
                   <div
                     className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border ${
-                      vencido
+                      alertaRoja
                         ? "border-danger-600/35 bg-danger-500/10"
-                        : porVencer
+                        : alertaAmbar
                           ? "border-warning-500/35 bg-warning-500/15"
                           : "border-slate-200 bg-slate-50"
                     }`}
                   >
                     <IconProductos
-                      className={vencido ? "text-danger-600" : porVencer ? "text-warning-500" : "text-slate-500"}
+                      className={alertaRoja ? "text-danger-600" : alertaAmbar ? "text-warning-500" : "text-slate-500"}
                     />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-slate-900">{producto.nombre}</p>
                     {producto.categoria && <p className="text-xs text-slate-500">{producto.categoria}</p>}
-                    {(vencido || porVencer) && (
-                      <span
-                        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                          vencido ? "bg-danger-500 text-white" : "bg-orange-100 text-warning-500"
-                        }`}
-                      >
-                        {vencido ? "Tiene lotes vencidos" : "Por vencer"}
-                      </span>
+                    {(bajoStock || vencido || porVencer) && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {bajoStock && (
+                          <span className="inline-block rounded-full bg-danger-500 px-2 py-0.5 text-xs font-medium text-white">
+                            Stock bajo
+                          </span>
+                        )}
+                        {(vencido || porVencer) && (
+                          <span
+                            className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                              vencido ? "bg-danger-500 text-white" : "bg-orange-100 text-warning-500"
+                            }`}
+                          >
+                            {vencido ? "Tiene lotes vencidos" : "Por vencer"}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="shrink-0 text-right">
@@ -209,6 +261,7 @@ function ProductosDesdeUrl() {
   const filtroInicial: FiltroProductos = {
     q: searchParams.get("q") ?? undefined,
     bajo: searchParams.get("bajo") === "1",
+    alertas: searchParams.get("alertas") === "1",
     vencimiento: (searchParams.get("vencimiento") as FiltroProductos["vencimiento"]) ?? undefined,
   };
   return <ProductosContenido filtroInicial={filtroInicial} />;

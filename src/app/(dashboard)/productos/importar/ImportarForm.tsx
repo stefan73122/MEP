@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, type ChangeEvent } from "react";
 import {
   confirmarImportacion,
   previsualizarImportacion,
@@ -11,12 +11,27 @@ import {
 const ESTADO_PREVIEW: EstadoPrevisualizacion = {};
 const ESTADO_CONFIRM: EstadoImportacion = {};
 
+function tamanoLegible(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function ImportarForm() {
   const [estadoPreview, previewAction, cargandoPreview] = useActionState(previsualizarImportacion, ESTADO_PREVIEW);
   const [estadoConfirm, confirmAction, confirmando] = useActionState(confirmarImportacion, ESTADO_CONFIRM);
+  // El formulario se resetea al terminar la acción, así que el archivo elegido se guarda aparte.
+  const [archivo, setArchivo] = useState<{ nombre: string; tamano: number } | null>(null);
 
-  const filas = estadoPreview.filas;
+  const filas = cargandoPreview ? undefined : estadoPreview.filas;
   const filasValidas = filas?.filter((f) => f.errores.length === 0) ?? [];
+
+  function alElegirArchivo(evento: ChangeEvent<HTMLInputElement>) {
+    const elegido = evento.target.files?.[0];
+    if (!elegido) return;
+    setArchivo({ nombre: elegido.name, tamano: elegido.size });
+    evento.target.form?.requestSubmit();
+  }
 
   if (estadoConfirm.resultado) {
     const { importados, errores } = estadoConfirm.resultado;
@@ -44,90 +59,111 @@ export function ImportarForm() {
     );
   }
 
-  if (!filas) {
-    return (
+  return (
+    <div className="space-y-3">
       <form action={previewAction} className="space-y-3 rounded-xl bg-white p-4">
-        <div>
-          <label htmlFor="archivo" className="block text-sm font-medium text-slate-700">
-            Archivo Excel (.xlsx)
-          </label>
-          <input
-            id="archivo"
-            name="archivo"
-            type="file"
-            accept=".xlsx"
-            required
-            className="mt-1 w-full text-sm"
-          />
-        </div>
+        <p className="text-sm font-medium text-slate-700">2. Elegí tu archivo Excel (.xlsx)</p>
 
-        {estadoPreview.error && (
+        {archivo && (
+          <div className="flex items-center gap-2 rounded-lg border border-success-500 bg-green-50 px-3 py-2 text-sm">
+            <span aria-hidden="true">📄</span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium text-slate-900">{archivo.nombre}</p>
+              <p className="text-xs text-slate-600">
+                {cargandoPreview ? "Leyendo archivo..." : `Archivo seleccionado · ${tamanoLegible(archivo.tamano)}`}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <label
+          htmlFor="archivo"
+          className={`block w-full cursor-pointer rounded-lg px-4 py-2.5 text-center font-medium transition ${
+            archivo
+              ? "border border-slate-300 text-slate-700 hover:bg-slate-100"
+              : "bg-primary-600 text-white hover:bg-primary-700"
+          } ${cargandoPreview ? "pointer-events-none opacity-60" : ""}`}
+        >
+          {archivo ? "Elegir otro archivo" : "Seleccionar archivo Excel"}
+        </label>
+        <input
+          id="archivo"
+          name="archivo"
+          type="file"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          onChange={alElegirArchivo}
+          className="sr-only"
+        />
+
+        {!cargandoPreview && estadoPreview.error && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-danger-600" role="alert">
             {estadoPreview.error}
           </p>
         )}
-
-        <button
-          type="submit"
-          disabled={cargandoPreview}
-          className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:bg-primary-700 disabled:opacity-60"
-        >
-          {cargandoPreview ? "Leyendo..." : "Ver vista previa"}
-        </button>
       </form>
-    );
-  }
 
-  return (
-    <div className="space-y-3">
-      <div className="rounded-xl bg-white p-4">
-        <p className="text-sm text-slate-600">
-          {filasValidas.length} de {filas.length} filas están listas para importar.
-        </p>
-      </div>
-
-      <div className="max-h-96 space-y-2 overflow-y-auto">
-        {filas.map((fila) => (
-          <div
-            key={fila.numero}
-            className={`rounded-lg border p-2 text-sm ${
-              fila.errores.length > 0 ? "border-danger-600 bg-red-50" : "border-slate-200 bg-white"
-            }`}
-          >
-            <p className="font-medium text-slate-900">
-              Fila {fila.numero}: {fila.nombre || "(sin nombre)"}
-              {fila.sku ? ` (${fila.sku})` : ""}
+      {filas && (
+        <>
+          <div className="rounded-xl bg-white p-4">
+            <p className="text-sm font-medium text-slate-700">3. Revisá los productos</p>
+            <p className="text-sm text-slate-600">
+              {filasValidas.length} de {filas.length} filas están listas para subir.
             </p>
-            {fila.errores.length > 0 ? (
-              <ul className="list-disc pl-4 text-xs text-danger-600">
-                {fila.errores.map((error, indice) => (
-                  <li key={indice}>{error}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-xs text-success-500">Lista para importar</p>
-            )}
           </div>
-        ))}
-      </div>
 
-      <form action={confirmAction} className="rounded-xl bg-white p-4">
-        <input type="hidden" name="filasJson" value={JSON.stringify(filasValidas)} />
+          <div className="max-h-96 space-y-2 overflow-y-auto">
+            {filas.map((fila) => (
+              <div
+                key={fila.numero}
+                className={`rounded-lg border p-2 text-sm ${
+                  fila.errores.length > 0 ? "border-danger-600 bg-red-50" : "border-slate-200 bg-white"
+                }`}
+              >
+                <p className="font-medium text-slate-900">
+                  Fila {fila.numero}: {fila.nombre || "(sin nombre)"}
+                  {fila.sku ? ` (${fila.sku})` : ""}
+                </p>
+                <p className="text-xs text-slate-600">
+                  {fila.categoria ?? "Sin categoría"} · {fila.unidadMedida} · Compra {fila.precioCompraTexto || "—"} ·
+                  Venta {fila.precioVentaTexto || "—"}
+                </p>
+                <p className="text-xs text-slate-600">
+                  Stock {fila.perecedero ? (fila.cantidadLoteTexto ?? "0") : fila.stockInicialTexto} · Mínimo{" "}
+                  {fila.stockMinimoTexto}
+                  {fila.perecedero && fila.fechaVencimientoTexto ? ` · Vence ${fila.fechaVencimientoTexto}` : ""}
+                </p>
+                {fila.errores.length > 0 ? (
+                  <ul className="list-disc pl-4 text-xs text-danger-600">
+                    {fila.errores.map((error, indice) => (
+                      <li key={indice}>{error}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-success-500">Lista para subir</p>
+                )}
+              </div>
+            ))}
+          </div>
 
-        {estadoConfirm.error && (
-          <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-danger-600" role="alert">
-            {estadoConfirm.error}
-          </p>
-        )}
+          <form action={confirmAction} className="rounded-xl bg-white p-4">
+            <input type="hidden" name="filasJson" value={JSON.stringify(filasValidas)} />
 
-        <button
-          type="submit"
-          disabled={confirmando || filasValidas.length === 0}
-          className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:bg-primary-700 disabled:opacity-60"
-        >
-          {confirmando ? "Importando..." : `Confirmar importación (${filasValidas.length})`}
-        </button>
-      </form>
+            {estadoConfirm.error && (
+              <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-danger-600" role="alert">
+                {estadoConfirm.error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={confirmando || filasValidas.length === 0}
+              className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:bg-primary-700 disabled:opacity-60"
+            >
+              {confirmando ? "Subiendo..." : `Subir productos (${filasValidas.length})`}
+            </button>
+          </form>
+        </>
+      )}
     </div>
   );
 }

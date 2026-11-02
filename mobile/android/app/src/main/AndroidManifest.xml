@@ -22,6 +22,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- "Abrir con" / "Compartir" un Excel desde otra app (WhatsApp,
+                 Archivos, Gmail...): lo recibe ArchivoEntrantePlugin y la app
+                 va directo a Productos > Importar. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+            </intent-filter>
+
         </activity>
 
         <provider
@@ -38,4 +54,8 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Recordatorios de inventario a la hora exacta (ver
+         src/lib/notificaciones.ts). Sin esto, desde Android 14 las alarmas
+         exactas vienen denegadas y los avisos llegan con mucho atraso. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 </manifest>

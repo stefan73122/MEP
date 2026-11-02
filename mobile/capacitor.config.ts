@@ -12,6 +12,16 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: "#141416",
   },
+  plugins: {
+    CapacitorSQLite: {
+      // La base se abre siempre como "no-encryption" (ver src/lib/db/sqlite.ts).
+      // Con el cifrado habilitado (valor por defecto del plugin), al arrancar
+      // crea una clave en el Keystore de Android aunque nunca se use, y en
+      // algunos teléfonos eso falla: el plugin queda sin cargar y la app no
+      // puede abrir la base ("CapacitorSQLitePlugin: null").
+      androidIsEncryption: false,
+    },
+  },
 };
 
 export default config;

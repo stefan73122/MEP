@@ -34,13 +34,13 @@ export function EntradaLoteForm({
       <input type="hidden" name="productoId" value={productoId} />
 
       <div className="grid grid-cols-2 gap-2">
-        <div>
+        <div className="flex flex-col justify-end">
           <label htmlFor="cantidadTexto" className="block text-sm font-medium text-slate-700">
             Cantidad ({unidadMedida})
           </label>
           <input id="cantidadTexto" name="cantidadTexto" type="text" inputMode="decimal" required className={clasesInput} />
         </div>
-        <CampoFecha id="fechaVencimientoTexto" name="fechaVencimientoTexto" label="Vencimiento" required />
+        <CampoFecha className="flex flex-col justify-end" id="fechaVencimientoTexto" name="fechaVencimientoTexto" label="Vencimiento" required />
       </div>
 
       <div>

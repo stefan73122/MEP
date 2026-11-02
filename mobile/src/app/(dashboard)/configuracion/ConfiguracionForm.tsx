@@ -35,13 +35,13 @@ export function ConfiguracionForm({ nombreNegocio, moneda, simboloMoneda, diasAl
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
+        <div className="flex flex-col justify-end">
           <label htmlFor="moneda" className={clasesLabel}>
             Código de moneda
           </label>
           <input id="moneda" name="moneda" type="text" defaultValue={moneda} required className={clasesInput} />
         </div>
-        <div>
+        <div className="flex flex-col justify-end">
           <label htmlFor="simboloMoneda" className={clasesLabel}>
             Símbolo
           </label>

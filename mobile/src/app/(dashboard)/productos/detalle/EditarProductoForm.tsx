@@ -54,7 +54,7 @@ export function EditarProductoForm({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
+        <div className="flex flex-col justify-end">
           <label htmlFor="precioCompraTexto" className={clasesLabel}>
             Precio de compra
           </label>
@@ -68,7 +68,7 @@ export function EditarProductoForm({
             className={clasesInput}
           />
         </div>
-        <div>
+        <div className="flex flex-col justify-end">
           <label htmlFor="precioVentaTexto" className={clasesLabel}>
             Precio de venta
           </label>

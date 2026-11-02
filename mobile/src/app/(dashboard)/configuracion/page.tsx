@@ -6,6 +6,7 @@ import { DIAS_ALERTA_VENCIMIENTO_DEFECTO } from "@/lib/constants";
 import type { Configuracion } from "@/lib/db/types";
 import { ConfiguracionForm } from "./ConfiguracionForm";
 import { LicenciaInfo } from "./LicenciaInfo";
+import { NotificacionesForm } from "./NotificacionesForm";
 import { PinForm } from "./PinForm";
 import { TemaForm } from "./TemaForm";
 
@@ -48,6 +49,11 @@ export default function ConfiguracionPage() {
       <div className="rounded-xl bg-white p-4">
         <h2 className="mb-3 text-sm font-semibold text-slate-900">Apariencia</h2>
         <TemaForm />
+      </div>
+
+      <div className="rounded-xl bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">Notificaciones</h2>
+        <NotificacionesForm />
       </div>
 
       <div className="rounded-xl bg-white p-4">

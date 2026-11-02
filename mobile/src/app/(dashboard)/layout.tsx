@@ -5,12 +5,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { db } from "@/lib/db/client";
 import { AuthGate } from "@/components/layout/AuthGate";
+import { AbrirArchivoEntrante } from "@/components/layout/AbrirArchivoEntrante";
+import { AbrirDesdeNotificacion } from "@/components/layout/AbrirDesdeNotificacion";
 import { NavBar } from "@/components/layout/NavBar";
 import { LogoutButton } from "@/components/layout/LogoutButton";
 import { IconAjustes } from "@/components/ui/icons";
 import { PagerPrincipal } from "@/components/pager/PagerPrincipal";
 import { PANTALLAS_PRINCIPALES } from "@/lib/pantallasPrincipales";
 import { sincronizarAlertas } from "@/lib/sincronizarAlertas";
+import { reprogramarNotificaciones } from "@/lib/notificaciones";
+import { App } from "@capacitor/app";
 
 // Mismo quiebre que ya usa NavBar para elegir barra inferior vs. sidebar
 // (md:hidden / hidden md:block): el carrusel de swipe solo tiene sentido en
@@ -40,6 +44,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     });
   }, []);
 
+  // El texto del recordatorio se calcula al programarlo (ver
+  // lib/notificaciones.ts): se actualiza al abrir la app y al mandarla a
+  // segundo plano, que es cuando ya quedaron hechos los cambios de stock.
+  useEffect(() => {
+    const reprogramar = () => {
+      reprogramarNotificaciones().catch(() => {});
+    };
+    reprogramar();
+    const listenerPause = App.addListener("pause", reprogramar);
+    return () => {
+      listenerPause.then((h) => h.remove());
+    };
+  }, []);
+
   // Igual que el componentDidMount/componentDidUpdate del diseño original:
   // cada vez que aparece una alerta nueva en el DOM (cambio de pantalla,
   // datos que terminan de cargar, swipe entre vecinas...) se resincroniza
@@ -59,6 +77,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <AuthGate>
+      <AbrirArchivoEntrante />
+      <AbrirDesdeNotificacion />
       <div className="flex min-h-screen flex-col md:flex-row">
         <NavBar />
 

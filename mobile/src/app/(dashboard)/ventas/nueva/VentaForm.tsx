@@ -473,7 +473,7 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
               </div>
 
               <div className="mt-2 grid grid-cols-2 gap-2">
-                <div>
+                <div className="flex flex-col justify-end">
                   <label className="block text-xs text-slate-500">Cantidad ({item.unidadMedida})</label>
                   <input
                     type="text"
@@ -483,7 +483,7 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
                     className={`mt-1 ${clasesInput}`}
                   />
                 </div>
-                <div>
+                <div className="flex flex-col justify-end">
                   <label className="block text-xs text-slate-500">Descuento (opcional)</label>
                   <input
                     type="text"
@@ -550,7 +550,7 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div>
+              <div className="flex flex-col justify-end">
                 <label className="block text-xs text-slate-500">Teléfono (opcional)</label>
                 <input
                   type="text"
@@ -559,7 +559,7 @@ export function VentaForm({ clientes, simbolo, borradorInicial }: Props) {
                   className={`mt-1 ${clasesInput}`}
                 />
               </div>
-              <div>
+              <div className="flex flex-col justify-end">
                 <label className="block text-xs text-slate-500">Límite de crédito</label>
                 <input
                   type="text"

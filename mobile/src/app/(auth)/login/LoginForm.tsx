@@ -13,8 +13,15 @@ const TECLA_NUMERO =
   "flex h-[68px] w-[68px] items-center justify-center rounded-full bg-white text-2xl font-bold text-slate-900 " +
   "shadow-[0_3px_0_rgba(0,0,0,0.35)] transition active:translate-y-px active:shadow-none disabled:opacity-50";
 
-export function LoginForm() {
+// `onDesbloqueado`: para cuando el teclado se muestra encima de la app ya
+// abierta (ver AuthGate) en vez de como pantalla aparte — al desbloquear se
+// avisa y no se navega a ningún lado.
+export function LoginForm({ onDesbloqueado }: { onDesbloqueado?: () => void } = {}) {
   const router = useRouter();
+  const alDesbloquear = useCallback(() => {
+    if (onDesbloqueado) onDesbloqueado();
+    else router.replace("/");
+  }, [onDesbloqueado, router]);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [huellaDisponible, setHuellaDisponible] = useState(false);
@@ -27,14 +34,14 @@ export function LoginForm() {
     try {
       await BiometricAuth.authenticate({ reason: "Desbloquear MIP", cancelTitle: "Usar PIN" });
       marcarDesbloqueado();
-      router.replace("/");
+      alDesbloquear();
     } catch {
       // Cancelado o fallido: se queda en el teclado numérico, sin mensaje de
       // error (cancelar la huella a propósito no es un error del usuario).
     } finally {
       setAutenticandoHuella(false);
     }
-  }, [router]);
+  }, [alDesbloquear]);
 
   useEffect(() => {
     let cancelado = false;
@@ -61,10 +68,10 @@ export function LoginForm() {
           setPin("");
           return;
         }
-        router.replace("/");
+        alDesbloquear();
       });
     },
-    [router],
+    [alDesbloquear],
   );
 
   const presionar = (digito: string) => {

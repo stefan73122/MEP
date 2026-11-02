@@ -23,13 +23,13 @@ export function GastoForm({ onExito }: { onExito: () => void }) {
   return (
     <form key={formularioId} action={formAction} className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        <div>
+        <div className="flex flex-col justify-end">
           <label htmlFor="montoTexto" className="block text-xs text-slate-500">
             Monto
           </label>
           <input id="montoTexto" name="montoTexto" type="text" inputMode="decimal" placeholder="0.00" required className={clasesInput} />
         </div>
-        <div>
+        <div className="flex flex-col justify-end">
           <label htmlFor="descripcion" className="block text-xs text-slate-500">
             Descripción
           </label>

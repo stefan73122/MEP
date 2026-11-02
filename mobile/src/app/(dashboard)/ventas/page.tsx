@@ -89,9 +89,9 @@ function VentasContenido() {
       </div>
 
       <form action="/ventas" method="GET" className="grid grid-cols-2 gap-2 rounded-xl bg-white p-3 sm:grid-cols-4">
-        <CampoFecha name="desde" label="Desde" defaultValue={intentarParsear(desde)} />
-        <CampoFecha name="hasta" label="Hasta" defaultValue={intentarParsear(hasta)} />
-        <div>
+        <CampoFecha className="flex flex-col justify-end" name="desde" label="Desde" defaultValue={intentarParsear(desde)} />
+        <CampoFecha className="flex flex-col justify-end" name="hasta" label="Hasta" defaultValue={intentarParsear(hasta)} />
+        <div className="flex flex-col justify-end">
           <label className="block text-xs font-medium text-slate-500">Cliente</label>
           <select
             name="clienteId"
@@ -106,7 +106,7 @@ function VentasContenido() {
             ))}
           </select>
         </div>
-        <div>
+        <div className="flex flex-col justify-end">
           <label className="block text-xs font-medium text-slate-500">Forma de pago</label>
           <select
             name="formaPago"

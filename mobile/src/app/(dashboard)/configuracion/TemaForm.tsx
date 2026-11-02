@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { guardarTema, leerTema, type Tema } from "@/lib/tema";
 
 const OPCIONES: { valor: Tema; etiqueta: string }[] = [
+  { valor: "sistema", etiqueta: "Sistema" },
   { valor: "light", etiqueta: "Claro" },
   { valor: "dark", etiqueta: "Oscuro" },
 ];
@@ -18,7 +19,7 @@ export function TemaForm() {
   if (tema === null) return null;
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-3 gap-2">
       {OPCIONES.map((opcion) => (
         <label
           key={opcion.valor}
