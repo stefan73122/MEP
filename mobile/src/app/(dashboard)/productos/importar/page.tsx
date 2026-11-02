@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useTransition } from "react";
 import { generarPlantillaExcel } from "@/lib/excelProductos";
 import { guardarBinario } from "@/lib/archivos";
@@ -28,9 +27,6 @@ export default function ImportarProductosPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <Link href="/productos" className="text-sm text-slate-500 hover:underline">
-        ← Productos
-      </Link>
       <h1 className="text-lg font-semibold text-slate-900">Importar productos desde Excel</h1>
 
       <div className="rounded-xl bg-white p-4 text-sm text-slate-600">

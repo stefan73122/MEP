@@ -27,3 +27,9 @@ export function alPedirFiltroProductos(avisar: () => void): () => void {
     oyentes.delete(avisar);
   };
 }
+
+// Solo consulta, sin descartarlo (lo usa el selector del catálogo para saber
+// que tiene que mostrar Productos).
+export function hayFiltroProductosPendiente(): boolean {
+  return pendiente !== null;
+}

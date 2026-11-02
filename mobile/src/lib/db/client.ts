@@ -91,13 +91,12 @@ function mapCliente(f: FilaCliente): Cliente {
 type FilaVenta = {
   id: number; clienteId: number | null; fecha: number; subtotal: number; descuento: number; total: number;
   formaPago: FormaPago; estado: "COMPLETADA" | "ANULADA"; motivoAnulacion: string | null;
-  nota: string | null; createdAt: number; updatedAt: number; cantidadServicios?: number | null;
+  nota: string | null; createdAt: number; updatedAt: number;
 };
 function mapVenta(f: FilaVenta): Venta {
   return {
     ...f,
     nota: f.nota ?? null,
-    cantidadServicios: f.cantidadServicios ?? 0,
     fecha: new Date(f.fecha),
     createdAt: new Date(f.createdAt),
     updatedAt: new Date(f.updatedAt),
@@ -458,8 +457,7 @@ const venta = {
     const orden = opciones?.orderBy === "asc" ? "ASC" : "DESC";
     const limite = opciones?.take ? ` LIMIT ${opciones.take}` : "";
     const filas = await consultar<FilaVenta>(
-      `SELECT v.*, (SELECT COUNT(*) FROM VentaServicio vs WHERE vs.ventaId = v.id) as cantidadServicios
-       FROM Venta v ${where} ORDER BY fecha ${orden}${limite}`,
+      `SELECT * FROM Venta ${where} ORDER BY fecha ${orden}${limite}`,
       params,
     );
     return filas.map(mapVenta);
@@ -715,6 +713,23 @@ const ventaServicio = {
       "INSERT INTO VentaServicio (ventaId, servicioId, cantidad, precioUnitario, descuento, subtotal) VALUES (?,?,?,?,?,?)",
       [data.ventaId, data.servicioId, data.cantidad, data.precioUnitario, data.descuento, data.subtotal],
     );
+  },
+
+  // Para el selector de Atender/Vender: ids de los servicios activos usados en
+  // más atenciones completadas (de todos los tiempos), del más usado al menos.
+  async idsMasUsados(limite: number): Promise<number[]> {
+    const filas = await consultar<{ servicioId: number }>(
+      `SELECT vs.servicioId as servicioId
+       FROM VentaServicio vs
+       JOIN Venta v ON v.id = vs.ventaId
+       JOIN Servicio s ON s.id = vs.servicioId
+       WHERE v.estado = 'COMPLETADA' AND s.activo = 1
+       GROUP BY vs.servicioId
+       ORDER BY COUNT(DISTINCT vs.ventaId) DESC, MAX(v.fecha) DESC
+       LIMIT ?`,
+      [limite],
+    );
+    return filas.map((f) => f.servicioId);
   },
 
   // Para reportes: servicios más realizados en el rango (ventas completadas),

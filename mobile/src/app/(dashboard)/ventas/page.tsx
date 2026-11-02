@@ -8,7 +8,7 @@ import { centavosATexto } from "@/lib/money";
 import { fechaHoraATexto, finDelDia, inicioDelDia, textoAFecha } from "@/lib/dates";
 import type { Cliente, VentaConCliente } from "@/lib/db/types";
 import { CampoFecha } from "@/components/forms/CampoFecha";
-import { etiquetaRegistro, useTipoNegocio } from "@/lib/tipoNegocio";
+import { useTipoNegocio } from "@/lib/tipoNegocio";
 
 function intentarParsear(texto: string | undefined): Date | undefined {
   if (!texto) return undefined;
@@ -25,13 +25,19 @@ const ETIQUETAS_FORMA_PAGO: Record<string, string> = {
   CREDITO: "Crédito",
 };
 
-function VentasContenido() {
-  const searchParams = useSearchParams();
+export type FiltroHistorial = { desde?: string; hasta?: string; clienteId?: string; formaPago?: string };
+
+function leerTexto(valor: FormDataEntryValue | null): string | undefined {
+  return typeof valor === "string" && valor !== "" ? valor : undefined;
+}
+
+// Contenido real de la pestaña Historial: los filtros viven en el estado de
+// la pantalla, no en la URL, para que el carrusel de swipe la pueda montar
+// como vecina de las otras (igual que Productos o Reportes).
+export function HistorialContenido({ filtroInicial }: { filtroInicial?: FiltroHistorial }) {
   const { textos } = useTipoNegocio();
-  const desde = searchParams.get("desde") ?? undefined;
-  const hasta = searchParams.get("hasta") ?? undefined;
-  const clienteId = searchParams.get("clienteId") ?? undefined;
-  const formaPago = searchParams.get("formaPago") ?? undefined;
+  const [filtros, setFiltros] = useState<FiltroHistorial>(() => filtroInicial ?? {});
+  const { desde, hasta, clienteId, formaPago } = filtros;
 
   const [cargando, setCargando] = useState(true);
   const [simbolo, setSimbolo] = useState("Bs");
@@ -80,17 +86,21 @@ function VentasContenido() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold text-slate-900">{textos.Ventas}</h1>
-        <Link
-          href="/ventas/nueva"
-          className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:brightness-110"
-        >
-          {textos.nuevaVenta}
-        </Link>
-      </div>
+      <h1 className="text-lg font-semibold text-slate-900">{textos.Ventas}</h1>
 
-      <form action="/ventas" method="GET" className="grid grid-cols-2 gap-2 rounded-xl bg-white p-3 sm:grid-cols-4">
+      <form
+        onSubmit={(evento) => {
+          evento.preventDefault();
+          const datos = new FormData(evento.currentTarget);
+          setFiltros({
+            desde: leerTexto(datos.get("desde")),
+            hasta: leerTexto(datos.get("hasta")),
+            clienteId: leerTexto(datos.get("clienteId")),
+            formaPago: leerTexto(datos.get("formaPago")),
+          });
+        }}
+        className="grid grid-cols-2 gap-2 rounded-xl bg-white p-3 sm:grid-cols-4"
+      >
         <CampoFecha className="flex flex-col justify-end" name="desde" label="Desde" defaultValue={intentarParsear(desde)} />
         <CampoFecha className="flex flex-col justify-end" name="hasta" label="Hasta" defaultValue={intentarParsear(hasta)} />
         <div className="flex flex-col justify-end">
@@ -143,7 +153,7 @@ function VentasContenido() {
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-900">
-                    {etiquetaRegistro(venta)} #{venta.id} · {venta.cliente?.nombre ?? "Cliente ocasional"}
+                    {textos.Venta} #{venta.id} · {venta.cliente?.nombre ?? "Cliente ocasional"}
                   </p>
                   <p className="text-xs text-slate-500">
                     {fechaHoraATexto(venta.fecha)} · {ETIQUETAS_FORMA_PAGO[venta.formaPago] ?? venta.formaPago}
@@ -162,10 +172,23 @@ function VentasContenido() {
   );
 }
 
+// Punto de entrada por URL real (escritorio, o refresh directo de /ventas):
+// los parámetros de la URL pasan a ser el filtro inicial.
+function HistorialDesdeUrl() {
+  const searchParams = useSearchParams();
+  const filtroInicial: FiltroHistorial = {
+    desde: searchParams.get("desde") ?? undefined,
+    hasta: searchParams.get("hasta") ?? undefined,
+    clienteId: searchParams.get("clienteId") ?? undefined,
+    formaPago: searchParams.get("formaPago") ?? undefined,
+  };
+  return <HistorialContenido filtroInicial={filtroInicial} />;
+}
+
 export default function VentasPage() {
   return (
     <Suspense fallback={<p className="text-sm text-slate-500">Cargando...</p>}>
-      <VentasContenido />
+      <HistorialDesdeUrl />
     </Suspense>
   );
 }

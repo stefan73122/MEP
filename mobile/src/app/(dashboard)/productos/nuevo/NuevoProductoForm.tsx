@@ -12,6 +12,7 @@ import {
   leerBorradorProducto,
   type BorradorProducto,
 } from "@/lib/borradorProducto";
+import { useAvisoSinGuardar } from "@/lib/botonAtras";
 
 const ESTADO_INICIAL: EstadoFormularioProducto = {};
 
@@ -47,6 +48,9 @@ export function NuevoProductoForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const ultimoRef = useRef<BorradorProducto>({});
   const cargadoRef = useRef(false);
+  const [hayCambios, setHayCambios] = useState(false);
+  // El botón atrás de Android avisa antes de descartar lo escrito.
+  useAvisoSinGuardar(hayCambios && !estado.id);
 
   function pintar(borrador: BorradorProducto) {
     ultimoRef.current = borrador;
@@ -68,6 +72,7 @@ export function NuevoProductoForm() {
             ([clave, valor]) => valor !== "" && clave !== "tipoVenta" && clave !== "fechaVencimientoInicialTexto",
           );
         pintar(hayDatos ? borrador! : {});
+        setHayCambios(hayDatos);
         cargadoRef.current = true;
       });
     // Salir de la pantalla a propósito descarta el borrador (igual que
@@ -83,6 +88,7 @@ export function NuevoProductoForm() {
   // Se lee recién en el próximo tick: los campos que dependen de un render
   // (el oculto de la fecha) todavía tienen el valor anterior durante el evento.
   function recordarCambios() {
+    setHayCambios(true);
     setTimeout(() => {
       const form = formRef.current;
       if (!form) return;

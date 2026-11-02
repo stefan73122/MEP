@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { db } from "@/lib/db/client";
 import { centavosATexto, centavosATextoEditable } from "@/lib/money";
@@ -90,10 +89,6 @@ function ProductoDetalleContenido() {
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <Link href="/productos" className="text-sm text-slate-500 hover:underline">
-        ← Productos
-      </Link>
-
       <div className="rounded-xl bg-white p-4">
         <div className="flex items-start justify-between gap-2">
           <div>

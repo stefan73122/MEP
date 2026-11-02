@@ -5,7 +5,8 @@ import Link from "next/link";
 import { db } from "@/lib/db/client";
 import { centavosATexto } from "@/lib/money";
 import type { Servicio } from "@/lib/db/types";
-import { IconBuscar, IconProductos, IconServicios } from "@/components/ui/icons";
+import { IconBuscar, IconServicios } from "@/components/ui/icons";
+import { CatalogoContenido } from "@/components/catalogo/CatalogoContenido";
 
 // Contenido real de la pantalla: estado local, nada de useSearchParams. Así
 // el carrusel de swipe puede montarla como vecina sin pelear por la URL.
@@ -39,15 +40,7 @@ export function ServiciosContenido() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        {/* Productos sigue disponible en modo servicios (ej. el shampoo que
-            vende una peluquería), pero en segundo plano: se entra desde acá. */}
-        <Link
-          href="/productos"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
-        >
-          <IconProductos className="h-4 w-4" /> Productos
-        </Link>
+      <div className="flex items-center justify-end gap-2">
         <Link
           href="/servicios/nuevo"
           className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:brightness-110"
@@ -121,4 +114,8 @@ export function ServiciosContenido() {
   );
 }
 
-export default ServiciosContenido;
+// Fuera del carrusel (ruta directa /servicios) se muestra dentro del
+// catálogo, con su selector.
+export default function ServiciosPage() {
+  return <CatalogoContenido />;
+}

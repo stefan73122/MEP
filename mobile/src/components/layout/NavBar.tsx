@@ -5,23 +5,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { db } from "@/lib/db/client";
 import { DIAS_ALERTA_VENCIMIENTO_DEFECTO } from "@/lib/constants";
-import { usePantallasPrincipales } from "@/lib/pantallasPrincipales";
+import { indicePestanaActiva, usePantallasPrincipales } from "@/lib/pantallasPrincipales";
 import { IconAlertaBandera } from "@/components/ui/icons";
 import { usePagerContext } from "@/components/pager/PagerContext";
 import { useTecladoAbierto } from "@/lib/useTecladoAbierto";
-
-// "/" (Inicio) sólo debe marcarse activo en la raíz exacta: con startsWith
-// a secas, cualquier ruta (todas empiezan con "/") quedaría marcada.
-function esEnlaceActivo(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
-  return pathname.startsWith(href);
-}
 
 export function NavBar() {
   const pathname = usePathname();
   const pager = usePagerContext();
   const tecladoAbierto = useTecladoAbierto();
   const PANTALLAS_PRINCIPALES = usePantallasPrincipales();
+  // En detalles y formularios queda resaltada la pestaña a la que pertenecen
+  // (ej. un detalle de venta marca Historial).
+  const indiceActivoPorRuta = indicePestanaActiva(PANTALLAS_PRINCIPALES, pathname);
   const [alertas, setAlertas] = useState({ productos: false, clientes: false });
 
   useEffect(() => {
@@ -62,8 +58,8 @@ export function NavBar() {
       {/* Escritorio / tablet: menú lateral */}
       <nav className="hidden w-56 shrink-0 border-r border-slate-200 bg-white p-4 md:block">
         <ul className="space-y-1">
-          {PANTALLAS_PRINCIPALES.map(({ href, etiqueta, Icono, alerta }) => {
-            const activo = esEnlaceActivo(pathname, href);
+          {PANTALLAS_PRINCIPALES.map(({ href, etiqueta, Icono, alerta }, indice) => {
+            const activo = indice === indiceActivoPorRuta;
             const conAlerta = alerta ? alertas[alerta] : false;
             return (
               <li key={href}>
@@ -94,12 +90,12 @@ export function NavBar() {
           abierto (si no, queda flotando encima tapando contenido) y vuelve
           a subir sola al cerrarse. */}
       <nav
-        className={`fixed inset-x-0 bottom-0 z-10 flex items-stretch gap-0.5 border-t border-slate-200 bg-white px-2 pt-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] transition-transform duration-200 md:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-10 flex items-stretch gap-0.5 border-t border-slate-200 bg-white px-1.5 pt-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom))] transition-transform duration-200 md:hidden ${
           tecladoAbierto ? "translate-y-full" : "translate-y-0"
         }`}
       >
         {PANTALLAS_PRINCIPALES.map(({ href, etiqueta, Icono, alerta }, indice) => {
-          const activo = indiceEnVivo !== null ? Math.round(indiceEnVivo) === indice : esEnlaceActivo(pathname, href);
+          const activo = indiceEnVivo !== null ? Math.round(indiceEnVivo) === indice : indice === indiceActivoPorRuta;
           // Mientras se arrastra, la intensidad del resaltado sigue al dedo
           // en vez de saltar de golpe (0 = lejos, 1 = pestaña activa).
           const intensidad = indiceEnVivo !== null ? Math.max(0, 1 - Math.abs(indiceEnVivo - indice)) : activo ? 1 : 0;
@@ -108,7 +104,9 @@ export function NavBar() {
             <Link
               key={href}
               href={href}
-              className="relative flex flex-1 -skew-x-[8deg] flex-col items-center justify-center gap-1 overflow-hidden rounded-lg py-2"
+              // min-w-0 + basis-0: las seis pestañas reparten el ancho por
+              // igual (≈55 px cada una en un teléfono de 360 px).
+              className="relative flex min-w-0 flex-1 basis-0 -skew-x-[8deg] flex-col items-center justify-center gap-1 overflow-hidden rounded-lg py-2"
               style={{
                 backgroundColor: intensidad > 0 ? `rgba(255,213,36,${intensidad})` : "transparent",
                 boxShadow: intensidad > 0.5 ? "0 3px 0 #a57e00" : "none",
@@ -122,7 +120,7 @@ export function NavBar() {
               )}
               <Icono className={`skew-x-[8deg] ${intensidad > 0.5 ? "text-black" : "text-slate-500"}`} />
               <span
-                className={`skew-x-[8deg] text-[11px] font-semibold ${
+                className={`skew-x-[8deg] text-[10px] leading-tight font-semibold tracking-tight whitespace-nowrap ${
                   intensidad > 0.5 ? "text-black" : "text-slate-500"
                 }`}
               >

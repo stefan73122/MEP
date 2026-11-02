@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   actualizarServicio,
@@ -9,6 +9,7 @@ import {
 } from "@/actions/servicios.actions";
 import { centavosATextoEditable } from "@/lib/money";
 import type { Servicio } from "@/lib/db/types";
+import { useAvisoSinGuardar } from "@/lib/botonAtras";
 
 const ESTADO_INICIAL: EstadoFormularioServicio = {};
 
@@ -20,15 +21,21 @@ const clasesLabel = "block text-sm font-medium text-slate-700";
 export function ServicioForm({ servicio, onGuardado }: { servicio?: Servicio; onGuardado?: () => void }) {
   const router = useRouter();
   const [estado, formAction, enviando] = useActionState(servicio ? actualizarServicio : crearServicio, ESTADO_INICIAL);
+  const [hayCambios, setHayCambios] = useState(false);
+  // El botón atrás de Android avisa antes de descartar lo escrito.
+  useAvisoSinGuardar(hayCambios && !estado.id);
 
   useEffect(() => {
     if (estado.id) router.replace("/servicios");
-    if (estado.exito) onGuardado?.();
+    if (estado.exito) {
+      setHayCambios(false);
+      onGuardado?.();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estado, router]);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} onInput={() => setHayCambios(true)} className="space-y-4">
       {servicio && <input type="hidden" name="id" value={servicio.id} />}
 
       <div>

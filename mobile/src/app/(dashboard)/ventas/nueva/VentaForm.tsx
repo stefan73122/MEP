@@ -14,7 +14,8 @@ import { centavosATexto, centavosATextoEditable, textoACentavos } from "@/lib/mo
 import { textoAUnidadesMinimas } from "@/lib/stock";
 import { inicioDelDia, textoAFecha } from "@/lib/dates";
 import type { FormaPago } from "@/lib/constants";
-import { IconAlertaTriangulo, IconBuscar, IconServicios } from "@/components/ui/icons";
+import { IconAlertaTriangulo, IconBuscar } from "@/components/ui/icons";
+import { SelectorServicios } from "./SelectorServicios";
 import {
   borrarBorrador,
   guardarBorradorConDemora,
@@ -101,6 +102,7 @@ const FORMAS: { valor: FormaPago; etiqueta: React.ReactNode }[] = [
 type Props = {
   clientes: ClienteOpcion[];
   servicios: ServicioOpcion[];
+  serviciosFrecuentes: ServicioOpcion[];
   simbolo: string;
   borradorInicial?: BorradorVenta | null;
 };
@@ -123,7 +125,7 @@ function calcularDescuentoItem(item: ItemCarrito): number {
   }
 }
 
-export function VentaForm({ clientes, servicios, simbolo, borradorInicial }: Props) {
+export function VentaForm({ clientes, servicios, serviciosFrecuentes, simbolo, borradorInicial }: Props) {
   const router = useRouter();
   const { tipo, textos } = useTipoNegocio();
   const modoServicios = tipo === "servicios";
@@ -132,7 +134,7 @@ export function VentaForm({ clientes, servicios, simbolo, borradorInicial }: Pro
   // Atención (modo servicios): servicios elegidos, con precio editable.
   const [serviciosCarrito, setServiciosCarrito] = useState<ItemServicio[]>(() => borradorInicial?.servicios ?? []);
   const [nota, setNota] = useState(() => borradorInicial?.nota ?? "");
-  const [queryServicio, setQueryServicio] = useState("");
+  const [mostrarServicios, setMostrarServicios] = useState(false);
 
   const [query, setQuery] = useState("");
   const [resultados, setResultados] = useState<ProductoBusquedaVenta[]>([]);
@@ -327,7 +329,6 @@ export function VentaForm({ clientes, servicios, simbolo, borradorInicial }: Pro
         item.servicioId === servicio.id ? { ...item, cantidadTexto: String(valorActual + 1) } : item,
       );
     });
-    setQueryServicio("");
   }
 
   function actualizarServicio(servicioId: number, cambios: Partial<ItemServicio>) {
@@ -389,15 +390,101 @@ export function VentaForm({ clientes, servicios, simbolo, borradorInicial }: Pro
     })),
   );
 
-  const qServicio = queryServicio.trim().toLowerCase();
-  const serviciosSugeridos = servicios
-    .filter((servicio) => !qServicio || servicio.nombre.toLowerCase().includes(qServicio))
-    .slice(0, qServicio ? 15 : 8);
-
   const faltaClienteParaCredito = formaPago === "CREDITO" && !clienteId;
   const hayAlgo = carrito.length > 0 || serviciosCarrito.length > 0;
   const puedeEnviar = hayAlgo && !faltaClienteParaCredito && !enviando;
   const sinResultados = query.trim() !== "" && !buscando && resultados.length === 0;
+
+  // Servicios: en modo servicios van primero y siempre visibles; en modo
+  // tienda, en segundo plano detrás de "+ Agregar servicio" (igual que los
+  // productos en modo servicios).
+  const selectorServiciosVisible = modoServicios || mostrarServicios || serviciosCarrito.length > 0;
+  const bloqueServicios = (
+    <>
+      {selectorServiciosVisible ? (
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Servicios</label>
+          <div className="mt-1">
+            <SelectorServicios
+              servicios={servicios}
+              frecuentes={serviciosFrecuentes}
+              simbolo={simbolo}
+              onElegir={agregarServicio}
+            />
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setMostrarServicios(true)}
+          className="w-full rounded-lg border border-dashed border-slate-300 px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+        >
+          + Agregar servicio
+        </button>
+      )}
+
+        {serviciosCarrito.length > 0 && (
+          <div data-swipe-ignorar="true">
+            <span className="text-sm font-medium text-slate-700">
+              Servicios elegidos ({serviciosCarrito.length})
+            </span>
+            <ul className="mt-2 space-y-2">
+              {serviciosCarrito.map((item) => (
+                <li key={item.servicioId} className="rounded-lg border border-slate-200 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="min-w-0 truncate text-sm font-medium text-slate-900">{item.nombre}</p>
+                    <button
+                      type="button"
+                      onClick={() => quitarServicio(item.servicioId)}
+                      className="shrink-0 text-xs font-medium text-danger-600 hover:underline"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <div className="flex flex-col justify-end">
+                      <label className="block text-xs text-slate-500">Precio</label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={item.precioTexto}
+                        onChange={(e) => actualizarServicio(item.servicioId, { precioTexto: e.target.value })}
+                        className={`mt-1 ${clasesInput}`}
+                      />
+                    </div>
+                    <div className="flex flex-col justify-end">
+                      <label className="block text-xs text-slate-500">Cantidad</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={item.cantidadTexto}
+                        onChange={(e) => actualizarServicio(item.servicioId, { cantidadTexto: e.target.value })}
+                        className={`mt-1 ${clasesInput}`}
+                      />
+                    </div>
+                    <div className="flex flex-col justify-end">
+                      <label className="block text-xs text-slate-500">Descuento</label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        value={item.descuentoTexto}
+                        disabled={hayDescuentoTotal}
+                        onChange={(e) => actualizarServicio(item.servicioId, { descuentoTexto: e.target.value })}
+                        className={`mt-1 ${clasesInput} disabled:bg-slate-100 disabled:text-slate-400`}
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-1 text-right text-sm font-medium text-slate-900">
+                    {centavosATexto(calcularBrutoServicio(item) - calcularDescuentoServicio(item), simbolo)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+    </>
+  );
 
   return (
     <form action={formAction} className="space-y-4">
@@ -405,109 +492,7 @@ export function VentaForm({ clientes, servicios, simbolo, borradorInicial }: Pro
       <input type="hidden" name="serviciosJson" value={serviciosJson} readOnly />
       <input type="hidden" name="confirmarExcesoCredito" ref={confirmarExcesoRef} defaultValue="" />
 
-      {modoServicios && (
-        <div>
-          <label className="block text-sm font-medium text-slate-700">Servicios</label>
-          {servicios.length === 0 ? (
-            <p className="mt-1 rounded-lg bg-slate-50 p-3 text-sm text-slate-500">
-              Todavía no cargaste servicios. Agregalos desde la pestaña Servicios.
-            </p>
-          ) : (
-            <>
-              {servicios.length > 8 && (
-                <div className="relative mt-1">
-                  <IconBuscar className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-primary-500" />
-                  <input
-                    type="text"
-                    value={queryServicio}
-                    onChange={(e) => setQueryServicio(e.target.value)}
-                    placeholder="Buscar servicio"
-                    className={`${clasesInput} pl-9`}
-                  />
-                </div>
-              )}
-              <div className="mt-2 flex flex-wrap gap-2">
-                {serviciosSugeridos.map((servicio) => (
-                  <button
-                    key={servicio.id}
-                    type="button"
-                    onClick={() => agregarServicio(servicio)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm hover:border-primary-500"
-                  >
-                    <IconServicios className="h-4 w-4 text-slate-500" />
-                    <span className="font-medium text-slate-900">{servicio.nombre}</span>
-                    <span className="text-xs text-slate-500">{centavosATexto(servicio.precio, simbolo)}</span>
-                  </button>
-                ))}
-                {serviciosSugeridos.length === 0 && (
-                  <p className="text-sm text-slate-500">No se encontró ningún servicio.</p>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {serviciosCarrito.length > 0 && (
-        <div data-swipe-ignorar="true">
-          <span className="text-sm font-medium text-slate-700">
-            Servicios elegidos ({serviciosCarrito.length})
-          </span>
-          <ul className="mt-2 space-y-2">
-            {serviciosCarrito.map((item) => (
-              <li key={item.servicioId} className="rounded-lg border border-slate-200 p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="min-w-0 truncate text-sm font-medium text-slate-900">{item.nombre}</p>
-                  <button
-                    type="button"
-                    onClick={() => quitarServicio(item.servicioId)}
-                    className="shrink-0 text-xs font-medium text-danger-600 hover:underline"
-                  >
-                    Quitar
-                  </button>
-                </div>
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  <div className="flex flex-col justify-end">
-                    <label className="block text-xs text-slate-500">Precio</label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={item.precioTexto}
-                      onChange={(e) => actualizarServicio(item.servicioId, { precioTexto: e.target.value })}
-                      className={`mt-1 ${clasesInput}`}
-                    />
-                  </div>
-                  <div className="flex flex-col justify-end">
-                    <label className="block text-xs text-slate-500">Cantidad</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={item.cantidadTexto}
-                      onChange={(e) => actualizarServicio(item.servicioId, { cantidadTexto: e.target.value })}
-                      className={`mt-1 ${clasesInput}`}
-                    />
-                  </div>
-                  <div className="flex flex-col justify-end">
-                    <label className="block text-xs text-slate-500">Descuento</label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={item.descuentoTexto}
-                      disabled={hayDescuentoTotal}
-                      onChange={(e) => actualizarServicio(item.servicioId, { descuentoTexto: e.target.value })}
-                      className={`mt-1 ${clasesInput} disabled:bg-slate-100 disabled:text-slate-400`}
-                    />
-                  </div>
-                </div>
-                <p className="mt-1 text-right text-sm font-medium text-slate-900">
-                  {centavosATexto(calcularBrutoServicio(item) - calcularDescuentoServicio(item), simbolo)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {modoServicios && bloqueServicios}
 
       {!buscadorProductosVisible && (
         <button
@@ -736,9 +721,7 @@ export function VentaForm({ clientes, servicios, simbolo, borradorInicial }: Pro
       </>
       )}
 
-      {modoServicios && serviciosCarrito.length === 0 && carrito.length === 0 && servicios.length > 0 && (
-        <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Tocá un servicio para agregarlo.</p>
-      )}
+      {!modoServicios && bloqueServicios}
 
       {modoServicios && hayAlgo && (
         <div className="flex justify-end">

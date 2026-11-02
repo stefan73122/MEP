@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { db } from "@/lib/db/client";
 import { centavosATexto } from "@/lib/money";
@@ -9,7 +8,7 @@ import { unidadesMinimasATexto } from "@/lib/stock";
 import { fechaHoraATexto } from "@/lib/dates";
 import type { VentaDetalle } from "@/lib/db/types";
 import { AnularVentaForm } from "./AnularVentaForm";
-import { etiquetaRegistro, useTipoNegocio } from "@/lib/tipoNegocio";
+import { useTipoNegocio } from "@/lib/tipoNegocio";
 
 const ETIQUETAS_FORMA_PAGO: Record<string, string> = {
   EFECTIVO: "Efectivo",
@@ -55,16 +54,12 @@ function VentaDetalleContenido() {
 
   if (cargando || !venta) return <p className="text-sm text-slate-500">Cargando...</p>;
 
-  // Cómo se llama depende de lo que tiene (no del modo actual): una venta con
-  // servicios es una atención aunque después se haya pasado a modo tienda.
-  const etiqueta = etiquetaRegistro(venta);
+  // El rótulo depende del modo actual; las secciones de abajo muestran
+  // siempre los servicios y productos que tenga el registro.
+  const etiqueta = textos.Venta;
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <Link href="/ventas" className="text-sm text-slate-500 hover:underline">
-        ← {textos.Ventas}
-      </Link>
-
       <div className="rounded-xl bg-white p-4">
         <div className="flex items-start justify-between gap-2">
           <div>

@@ -11,7 +11,8 @@ import { NavBar } from "@/components/layout/NavBar";
 import { LogoutButton } from "@/components/layout/LogoutButton";
 import { IconAjustes } from "@/components/ui/icons";
 import { PagerPrincipal } from "@/components/pager/PagerPrincipal";
-import { usePantallasPrincipales } from "@/lib/pantallasPrincipales";
+import { esPantallaPrincipal, usePantallasPrincipales } from "@/lib/pantallasPrincipales";
+import { ManejadorBotonAtras } from "@/components/layout/ManejadorBotonAtras";
 import { TipoNegocioGate } from "@/components/layout/TipoNegocioGate";
 import { sincronizarAlertas } from "@/lib/sincronizarAlertas";
 import { reprogramarNotificaciones } from "@/lib/notificaciones";
@@ -74,6 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <AbrirArchivoEntrante />
       <AbrirDesdeNotificacion />
       <TipoNegocioGate>
+      <ManejadorBotonAtras />
       <div className="flex min-h-screen flex-col md:flex-row">
         <NavBar />
 
@@ -114,6 +116,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 function ContenidoPrincipal({ esMobile, children }: { esMobile: boolean; children: React.ReactNode }) {
   const pathname = usePathname();
   const pantallas = usePantallasPrincipales();
-  const esRutaDelCarrusel = pantallas.some((p) => p.href === pathname);
+  const esRutaDelCarrusel = esPantallaPrincipal(pantallas, pathname);
   return esMobile && esRutaDelCarrusel ? <PagerPrincipal /> : <>{children}</>;
 }

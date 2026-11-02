@@ -8,7 +8,7 @@ import { centavosATexto, centavosATextoEditable } from "@/lib/money";
 import { fechaATexto } from "@/lib/dates";
 import { calcularSaldoPendiente } from "@/lib/creditos";
 import type { Cliente, Pago, VentaConPagos } from "@/lib/db/types";
-import { etiquetaRegistro, useTipoNegocio } from "@/lib/tipoNegocio";
+import { useTipoNegocio } from "@/lib/tipoNegocio";
 import { EditarClienteForm } from "./EditarClienteForm";
 import { EstadoClienteToggle } from "./EstadoClienteToggle";
 import { PagoForm } from "./PagoForm";
@@ -65,10 +65,6 @@ function ClienteDetalleContenido() {
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <Link href="/clientes" className="text-sm text-slate-500 hover:underline">
-        ← Clientes
-      </Link>
-
       <div className="rounded-xl bg-white p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -135,7 +131,7 @@ function ClienteDetalleContenido() {
                   >
                     <div>
                       <p className="font-medium text-slate-900">
-                        {etiquetaRegistro(venta)} #{venta.id} · {fechaATexto(venta.fecha)}
+                        {textos.Venta} #{venta.id} · {fechaATexto(venta.fecha)}
                       </p>
                       <p className="text-xs text-slate-500">
                         {venta.estado === "ANULADA" ? "Anulada" : "Completada"} · Total: {centavosATexto(venta.total, simbolo)}

@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { usePantallasPrincipales } from "@/lib/pantallasPrincipales";
+import { indicePantalla, usePantallasPrincipales } from "@/lib/pantallasPrincipales";
 import { PagerContext, type FiltroPantalla } from "./PagerContext";
 
 const DURACION_MS = 200;
@@ -82,7 +82,7 @@ export function PagerPrincipal() {
   const PANTALLAS_PRINCIPALES = usePantallasPrincipales();
 
   const [indiceActivo, setIndiceActivo] = useState(() => {
-    const i = PANTALLAS_PRINCIPALES.findIndex((p) => p.href === pathname);
+    const i = indicePantalla(PANTALLAS_PRINCIPALES, pathname);
     return i === -1 ? 0 : i;
   });
   const [anchoContenedor, setAnchoContenedor] = useState(0);
@@ -165,7 +165,7 @@ export function PagerPrincipal() {
   // salto más grande (o el ancho todavía no se midió), no hay una física de
   // arrastre razonable que animar y se va directo.
   useLayoutEffect(() => {
-    const idx = PANTALLAS_PRINCIPALES.findIndex((p) => p.href === pathname);
+    const idx = indicePantalla(PANTALLAS_PRINCIPALES, pathname);
     if (idx === -1 || idx === indiceActivoRef.current) return;
     const ancho = anchoContenedorRef.current;
     const diferencia = idx - indiceActivoRef.current;
@@ -319,9 +319,12 @@ export function PagerPrincipal() {
   }
 
   function irA(ruta: string, filtroInicial?: FiltroPantalla) {
-    const esPantallaDelCarrusel = PANTALLAS_PRINCIPALES.some((p) => p.href === ruta);
-    if (filtroInicial) setFiltroPendiente({ href: ruta, filtro: filtroInicial, nonce: Date.now() });
-    if (esPantallaDelCarrusel) router.replace(ruta, { scroll: false });
+    // Una ruta alternativa de una pestaña (ej. /productos en modo servicios,
+    // que vive en la pestaña Servicios) se lleva a la ruta propia de esa pestaña.
+    const indice = indicePantalla(PANTALLAS_PRINCIPALES, ruta);
+    const destino = indice === -1 ? ruta : PANTALLAS_PRINCIPALES[indice].href;
+    if (filtroInicial) setFiltroPendiente({ href: destino, filtro: filtroInicial, nonce: Date.now() });
+    if (indice !== -1) router.replace(destino, { scroll: false });
     else router.push(ruta);
   }
 

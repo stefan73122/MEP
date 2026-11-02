@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { crearCliente, type EstadoFormularioCliente } from "@/actions/clientes.actions";
+import { useAvisoSinGuardar } from "@/lib/botonAtras";
 
 const ESTADO_INICIAL: EstadoFormularioCliente = {};
 
@@ -13,13 +14,16 @@ const clasesLabel = "block text-sm font-medium text-slate-700";
 export function NuevoClienteForm() {
   const router = useRouter();
   const [estado, formAction, enviando] = useActionState(crearCliente, ESTADO_INICIAL);
+  const [hayCambios, setHayCambios] = useState(false);
+  // El botón atrás de Android avisa antes de descartar lo escrito.
+  useAvisoSinGuardar(hayCambios && !estado.id);
 
   useEffect(() => {
     if (estado.id) router.replace(`/clientes/detalle?id=${estado.id}`);
   }, [estado, router]);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} onInput={() => setHayCambios(true)} className="space-y-4">
       <div>
         <label htmlFor="nombre" className={clasesLabel}>
           Nombre

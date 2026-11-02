@@ -92,9 +92,6 @@ export type Venta = {
   nota: string | null;
   createdAt: Date;
   updatedAt: Date;
-  // Cuántos servicios tiene (0 = venta solo de productos). Una venta con
-  // servicios es una "atención", sin importar el modo en que esté la app.
-  cantidadServicios: number;
 };
 
 export type VentaItem = {

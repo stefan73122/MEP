@@ -9,6 +9,7 @@ import { unidadesMinimasATexto } from "@/lib/stock";
 import { DIAS_ALERTA_VENCIMIENTO_DEFECTO } from "@/lib/constants";
 import { obtenerLotesPorVencer, obtenerLotesVencidos } from "@/lib/lotes";
 import type { Producto } from "@/lib/db/types";
+import { CatalogoContenido } from "@/components/catalogo/CatalogoContenido";
 import { alPedirFiltroProductos, tomarFiltroProductosPendiente } from "@/lib/filtroProductosPendiente";
 import { IconAlertaBandera, IconAlertaTriangulo, IconBuscar, IconProductos, IconReloj } from "@/components/ui/icons";
 
@@ -264,7 +265,8 @@ function ProductosDesdeUrl() {
     alertas: searchParams.get("alertas") === "1",
     vencimiento: (searchParams.get("vencimiento") as FiltroProductos["vencimiento"]) ?? undefined,
   };
-  return <ProductosContenido filtroInicial={filtroInicial} />;
+  // Fuera del carrusel también se muestra dentro del catálogo, con su selector.
+  return <CatalogoContenido filtroInicial={filtroInicial} />;
 }
 
 export default function ProductosPage() {

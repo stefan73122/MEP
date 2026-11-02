@@ -9,21 +9,21 @@ import type { TipoNegocio } from "./db/types";
 export const ONBOARDING_VERSION = 1;
 
 // Textos que cambian según el modo. El registro en sí (tabla Venta) es el
-// mismo: en modo servicios a una venta se la llama "atención".
+// mismo y se rotula según el modo actual: en modo tienda todo es "Venta" y en
+// modo servicios todo es "Atención", tenga servicios, productos o ambos (el
+// detalle siempre muestra lo que tiene).
 export type Textos = {
   venta: string;
   ventas: string;
-  Venta: string;
+  Venta: "Venta" | "Atención";
   Ventas: string;
   /** Pestaña de la barra inferior para registrar. */
   vender: string;
-  nuevaVenta: string;
   registrarVenta: string;
   confirmarVenta: string;
   confirmarIgual: string;
   vendidoHoy: string;
   ventasDeHoy: string;
-  verVentas: string;
 };
 
 const TEXTOS: Record<TipoNegocio, Textos> = {
@@ -33,13 +33,11 @@ const TEXTOS: Record<TipoNegocio, Textos> = {
     Venta: "Venta",
     Ventas: "Ventas",
     vender: "Vender",
-    nuevaVenta: "+ Nueva venta",
     registrarVenta: "Registrar una venta",
     confirmarVenta: "Confirmar venta",
     confirmarIgual: "Vender igual",
     vendidoHoy: "Vendido hoy",
     ventasDeHoy: "Ventas de hoy",
-    verVentas: "Ver ventas →",
   },
   servicios: {
     venta: "atención",
@@ -47,25 +45,16 @@ const TEXTOS: Record<TipoNegocio, Textos> = {
     Venta: "Atención",
     Ventas: "Atenciones",
     vender: "Atender",
-    nuevaVenta: "+ Nueva atención",
     registrarVenta: "Registrar una atención",
     confirmarVenta: "Registrar atención",
     confirmarIgual: "Registrar igual",
     vendidoHoy: "Ingresos de hoy",
     ventasDeHoy: "Atenciones de hoy",
-    verVentas: "Ver atenciones →",
   },
 };
 
 export function textosDe(tipo: TipoNegocio): Textos {
   return TEXTOS[tipo];
-}
-
-// Cómo se llama un registro concreto: depende de lo que tiene, no del modo
-// actual. Así, si el negocio pasa de servicios a tienda, sus atenciones
-// pasadas se siguen viendo como atenciones (y viceversa).
-export function etiquetaRegistro(registro: { cantidadServicios: number }): "Venta" | "Atención" {
-  return registro.cantidadServicios > 0 ? "Atención" : "Venta";
 }
 
 export type ContextoTipoNegocio = {

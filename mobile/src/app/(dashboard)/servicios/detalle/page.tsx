@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { db } from "@/lib/db/client";
 import { cambiarEstadoServicio } from "@/actions/servicios.actions";
@@ -42,10 +41,6 @@ function ServicioDetalleContenido() {
 
   return (
     <div className="mx-auto max-w-lg space-y-4">
-      <Link href="/servicios" className="text-sm text-slate-500 hover:underline">
-        ← Servicios
-      </Link>
-
       <div className="flex items-center justify-between gap-2">
         <h1 className="min-w-0 truncate text-lg font-semibold text-slate-900">{servicio.nombre}</h1>
         {!servicio.activo && (

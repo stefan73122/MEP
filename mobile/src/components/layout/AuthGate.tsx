@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { App } from "@capacitor/app";
 import { tieneAcceso, registrarRebloqueoAlPausar, bloquear } from "@/lib/auth";
 import { LoginForm } from "@/app/(auth)/login/LoginForm";
+import { marcarAppBloqueada } from "@/lib/botonAtras";
 
 // "iniciando": todavía no se comprobó el acceso, no se muestra nada.
 // "oculto": la app está (o viene de estar) en segundo plano.
@@ -63,6 +64,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
+
+  // Con el teclado del PIN encima, el botón atrás sale de la app (ver
+  // ManejadorBotonAtras) en vez de navegar por debajo del bloqueo.
+  useEffect(() => {
+    marcarAppBloqueada(estado === "bloqueado");
+  }, [estado]);
 
   if (estado === "iniciando") return null;
 
