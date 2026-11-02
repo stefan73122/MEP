@@ -314,22 +314,43 @@ async function migrar(conexion: SQLiteDBConnection): Promise<void> {
 
 let promesaConexion: Promise<SQLiteDBConnection> | null = null;
 
-async function abrirConexion(): Promise<SQLiteDBConnection> {
-  const sqlite = new SQLiteConnection(CapacitorSQLite);
-  const esWeb = Capacitor.getPlatform() === "web";
+// Una sola instancia para toda la app: SQLiteConnection guarda en memoria (en
+// JS) qué conexiones creó, y isConnection/retrieveConnection solo miran ese
+// registro. Con una instancia nueva por intento, el registro siempre estaba
+// vacío y se volvía a llamar a createConnection sobre una conexión nativa que
+// seguía abierta ("Connection tienda already exists").
+const sqlite = new SQLiteConnection(CapacitorSQLite);
+let storeWebListo = false;
 
-  if (esWeb) {
-    // En el navegador (desarrollo) se usa el store basado en jeep-sqlite +
-    // IndexedDB; en el APK real, el plugin usa SQLite nativo directamente.
-    // OJO: hay que importar "jeep-sqlite/loader" (no "jeep-sqlite" a secas):
-    // el paquete principal no registra el custom element por sí solo.
-    const { defineCustomElements } = await import("jeep-sqlite/loader");
-    defineCustomElements(window);
-    if (!document.querySelector("jeep-sqlite")) {
-      document.body.appendChild(document.createElement("jeep-sqlite"));
-    }
-    await customElements.whenDefined("jeep-sqlite");
-    await sqlite.initWebStore();
+async function prepararStoreWeb(): Promise<void> {
+  if (storeWebListo) return;
+  // En el navegador (desarrollo) se usa el store basado en jeep-sqlite +
+  // IndexedDB; en el APK real, el plugin usa SQLite nativo directamente.
+  // OJO: hay que importar "jeep-sqlite/loader" (no "jeep-sqlite" a secas):
+  // el paquete principal no registra el custom element por sí solo.
+  const { defineCustomElements } = await import("jeep-sqlite/loader");
+  defineCustomElements(window);
+  if (!document.querySelector("jeep-sqlite")) {
+    document.body.appendChild(document.createElement("jeep-sqlite"));
+  }
+  await customElements.whenDefined("jeep-sqlite");
+  await sqlite.initWebStore();
+  storeWebListo = true;
+}
+
+// Obtiene la conexión a la base reutilizando la nativa si ya existe.
+//
+// Cuando Android recarga la vista web (por ejemplo, al volver de segundo
+// plano después de liberar memoria), todo el JavaScript arranca de cero pero
+// la conexión nativa sigue abierta. checkConnectionsConsistency() compara las
+// dos listas y cierra del lado nativo las que JS ya no conoce; después de eso,
+// crear la conexión vuelve a ser seguro. Si JS sí la conoce (por ejemplo, al
+// tocar "Reintentar"), se reutiliza la misma, abriéndola solo si está cerrada.
+async function conectar(): Promise<SQLiteDBConnection> {
+  try {
+    await sqlite.checkConnectionsConsistency();
+  } catch {
+    // Sin conexiones previas que comparar: no hay nada que corregir.
   }
 
   const yaExiste = (await sqlite.isConnection(NOMBRE_DB, false)).result;
@@ -337,41 +358,51 @@ async function abrirConexion(): Promise<SQLiteDBConnection> {
     ? await sqlite.retrieveConnection(NOMBRE_DB, false)
     : await sqlite.createConnection(NOMBRE_DB, false, "no-encryption", 1, false);
 
-  await conexion.open();
-  try {
-    const version = await leerVersionEsquema(conexion);
-    if (version < VERSION_ESQUEMA) {
-      // Instalación nueva (base vacía): no hay nada que respaldar. En web
-      // (solo desarrollo) la base vive en IndexedDB y no hay archivo.
-      const hayDatosPrevios = await existeTabla(conexion, "Configuracion");
-      if (hayDatosPrevios && !esWeb) {
-        try {
-          await respaldarBase(conexion, version);
-        } catch (error) {
-          throw new Error(
-            "No se pudo hacer el respaldo de tus datos antes de actualizar, así que no se modificó nada. " +
-              `Detalle: ${mensajeDe(error)}`,
-          );
-        }
-      }
-      await migrar(conexion);
-      if (esWeb) {
-        await sqlite.saveToStore(NOMBRE_DB);
+  const abierta = (await conexion.isDBOpen()).result;
+  if (!abierta) await conexion.open();
+  return conexion;
+}
+
+async function abrirConexion(): Promise<SQLiteDBConnection> {
+  const esWeb = Capacitor.getPlatform() === "web";
+  if (esWeb) await prepararStoreWeb();
+
+  const conexion = await conectar();
+
+  // La migración depende de user_version guardado en la propia base, no de si
+  // la conexión es nueva o reutilizada: corre una sola vez por base. Si falla
+  // (o falla el respaldo previo), la conexión queda abierta tal cual y el
+  // próximo intento la reutiliza; la transacción ya se deshizo en migrar().
+  const version = await leerVersionEsquema(conexion);
+  if (version < VERSION_ESQUEMA) {
+    // Instalación nueva (base vacía): no hay nada que respaldar. En web
+    // (solo desarrollo) la base vive en IndexedDB y no hay archivo.
+    const hayDatosPrevios = await existeTabla(conexion, "Configuracion");
+    if (hayDatosPrevios && !esWeb) {
+      try {
+        await respaldarBase(conexion, version);
+      } catch (error) {
+        throw new Error(
+          "No se pudo hacer el respaldo de tus datos antes de actualizar, así que no se modificó nada. " +
+            `Detalle: ${mensajeDe(error)}`,
+        );
       }
     }
-  } catch (error) {
-    // Se cierra para que "Reintentar" vuelva a empezar desde cero.
-    await sqlite.closeConnection(NOMBRE_DB, false).catch(() => {});
-    throw error;
+    await migrar(conexion);
+    if (esWeb) {
+      await sqlite.saveToStore(NOMBRE_DB);
+    }
   }
 
   return conexion;
 }
 
 // Conexión única para toda la vida de la app (sistema de un solo usuario,
-// sin necesidad de manejar conexiones concurrentes). Si falla al abrir (por
-// ejemplo, el respaldo previo a una migración), no se guarda el fallo: el
-// próximo intento vuelve a probar.
+// sin necesidad de manejar conexiones concurrentes). Todas las llamadas
+// comparten la misma promesa: aunque React monte dos veces o se toque
+// "Reintentar" varias veces seguidas, la base se inicializa una sola vez a la
+// vez. Si falla (por ejemplo, el respaldo previo a una migración), no se
+// guarda el fallo: el próximo intento vuelve a probar con la misma lógica.
 export function obtenerConexion(): Promise<SQLiteDBConnection> {
   if (!promesaConexion) {
     promesaConexion = abrirConexion().catch((error) => {
@@ -384,6 +415,5 @@ export function obtenerConexion(): Promise<SQLiteDBConnection> {
 
 export async function persistirCambios(): Promise<void> {
   if (Capacitor.getPlatform() !== "web") return;
-  const sqlite = new SQLiteConnection(CapacitorSQLite);
   await sqlite.saveToStore(NOMBRE_DB);
 }
