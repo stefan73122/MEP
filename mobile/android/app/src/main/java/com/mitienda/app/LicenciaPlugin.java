@@ -21,20 +21,35 @@ import java.security.MessageDigest;
 @CapacitorPlugin(name = "LicenciaNativa")
 public class LicenciaPlugin extends Plugin {
 
-    // Huella SHA-256 (formato de "keytool -list -v") del certificado con el
-    // que debe estar firmado este APK. La de acá es la del keystore de
-    // DEPURACIÓN de esta máquina — sirve solo para probar. Antes de entregar
-    // un APK firmado de verdad a un cliente hay que reemplazarla por la
-    // huella del keystore real. No es un secreto: es pública por naturaleza.
-    private static final String HUELLA_FIRMA_ESPERADA =
-        "1D:AB:B3:33:96:28:3A:1C:1F:93:F8:8B:7C:6A:01:E5:97:C0:CB:BE:E6:D2:2B:78:2B:2F:3D:02:FD:77:55:25";
+    // Huellas SHA-256 (formato de "keytool -list -v") de los certificados con
+    // los que se acepta que esté firmado este APK. Hoy son dos claves de
+    // DEPURACIÓN, que sirven solo para probar:
+    // - 1D:AB:…: la que trae el código desde el 2026-09-12. Es del keystore de
+    //   depuración de la computadora donde se agregó, no de la PC actual.
+    // - 36:77:…: la del keystore de depuración de la PC donde se clonó el repo
+    //   el 2026-11-07 (%USERPROFILE%\.android\debug.keystore), comprobada con
+    //   "apksigner verify --print-certs" sobre un APK compilado ahí.
+    // Antes de entregar un APK firmado de verdad a un cliente, hay que dejar acá
+    // solo la huella del keystore de producción. No son secretos: son públicas
+    // por naturaleza (cualquiera las lee de un APK).
+    private static final String[] HUELLAS_FIRMA_ACEPTADAS = {
+        "1D:AB:B3:33:96:28:3A:1C:1F:93:F8:8B:7C:6A:01:E5:97:C0:CB:BE:E6:D2:2B:78:2B:2F:3D:02:FD:77:55:25",
+        "36:77:F1:6B:F2:1B:62:AF:A8:B4:BD:AE:CE:BA:98:E4:29:E8:60:32:07:E1:04:B2:F1:27:45:8E:29:95:88:4B",
+    };
 
     @PluginMethod
     public void verificarFirma(PluginCall call) {
-        boolean valida;
+        boolean valida = false;
         try {
             String huellaActual = obtenerHuellaFirmaActual();
-            valida = huellaActual != null && huellaActual.equalsIgnoreCase(HUELLA_FIRMA_ESPERADA);
+            if (huellaActual != null) {
+                for (String aceptada : HUELLAS_FIRMA_ACEPTADAS) {
+                    if (huellaActual.equalsIgnoreCase(aceptada)) {
+                        valida = true;
+                        break;
+                    }
+                }
+            }
         } catch (Exception error) {
             valida = false;
         }
