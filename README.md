@@ -115,3 +115,64 @@ la de "Vender".
   es opcional — si no lo configurás, se entra directo.
 - Todas las operaciones que tocan stock, lotes o ventas van dentro de una transacción de
   Prisma.
+
+## Backend (Supabase): cuentas y licencias de la app móvil
+
+La app móvil (`mobile/`) ya no se activa con una clave generada a mano. Cada cliente tiene una
+**cuenta** (correo y contraseña) y una **licencia** en Supabase (proyecto
+`mofhbzymjfpakhbejmuc`). Los datos del negocio siguen 100 % en el teléfono.
+
+Cómo funciona:
+
+1. El cliente inicia sesión en la app. Solo hace falta internet para entrar.
+2. La app llama a la Edge Function `licencia` (`supabase/functions/licencia/`). El servidor revisa
+   que la licencia esté activa, no vencida y sin pasar el límite de teléfonos, y devuelve un
+   **certificado firmado** (JWT ES256) atado a ese teléfono.
+3. La app verifica el certificado **sin conexión** con la clave pública que lleva embebida
+   (`mobile/src/lib/backend/config.ts`). Funciona hasta 30 días sin internet y se renueva sola
+   cada vez que hay conexión. Si la licencia se suspende o vence, la app se bloquea en cuanto
+   se conecta (o cuando se acaban los días sin conexión).
+4. El PIN o la huella siguen siendo el bloqueo del día a día, igual que antes.
+
+Seguridad:
+
+- Las tablas (`licencias`, `dispositivos`) tienen RLS: con la clave publicable del APK un cliente
+  solo puede **leer** su propia licencia, nunca modificarla. Los cambios pasan por funciones SQL
+  que toman el usuario del JWT (`supabase/migrations/`).
+- El registro público está desactivado: las cuentas las creas solo tú.
+- La clave privada que firma los certificados está en los secretos de Supabase
+  (`MIP_LICENCIA_CLAVE_PRIVADA`) y en `supabase/functions/.env`, que git ignora. **Guarda una copia
+  en un gestor de contraseñas**: Supabase no deja volver a leerla.
+
+### Administrar clientes
+
+Requiere haber iniciado sesión en la CLI (`npx supabase login`). Las claves del proyecto se piden
+en el momento; la clave secreta no se guarda en ningún archivo.
+
+| Comando | Qué hace |
+| ------- | -------- |
+| `npm run clientes -- crear correo@x.com` | Crea la cuenta con licencia activa y muestra la contraseña generada. Opciones: `--dispositivos N`, `--vence AAAA-MM-DD`, `--notas "..."`, `--contrasena X` |
+| `npm run clientes -- listar` | Todos los clientes con el estado de su licencia |
+| `npm run clientes -- ver correo@x.com` | Licencia y teléfonos registrados |
+| `npm run clientes -- suspender correo@x.com` | Suspende (y `reactivar` la vuelve a activar) |
+| `npm run clientes -- vencimiento correo@x.com 2027-12-31` | Cambia el vencimiento (`nunca` lo quita) |
+| `npm run clientes -- liberar correo@x.com ABCD-1234-EF56` | Libera un teléfono (cambio de teléfono). También `bloquear` y `desbloquear` |
+| `npm run clientes -- contrasena correo@x.com` | Asigna una contraseña nueva |
+| `npm run clientes -- borrar correo@x.com` | Borra la cuenta y su licencia |
+
+El cliente también puede liberar su teléfono él mismo: Ajustes > Licencia > Cerrar sesión.
+
+### Desplegar cambios del backend
+
+```bash
+npx supabase db push --remote                        # migraciones de supabase/migrations
+npx supabase functions deploy licencia --use-api     # la Edge Function (sin Docker)
+npx supabase secrets set --env-file supabase/functions/.env
+npm run probar:ingreso                               # prueba de punta a punta contra el proyecto
+```
+
+- Días sin conexión: `npx supabase secrets set MIP_LICENCIA_DIAS_SIN_CONEXION=15` (entre 1 y 90;
+  por defecto 30). No hace falta publicar otra versión de la app.
+- Rotar la clave de firma: `npm run licencias:generar-claves -- --forzar`, agregar la pública nueva a
+  `CLAVES_PUBLICAS_LICENCIA` **junto a la anterior**, distribuir ese APK y recién después subir la
+  privada nueva con `secrets set`. `npm run probar:firma` comprueba que el par coincide.

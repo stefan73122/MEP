@@ -9,7 +9,11 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "clientes": "node scripts/clientes.mjs",
+    "probar:ingreso": "tsx scripts/probar-ingreso.mts",
+    "probar:firma": "tsx scripts/probar-firma.mts",
+    "licencias:generar-claves": "node scripts/generar-claves-licencia.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -24,6 +28,7 @@
     "zod": "^4.6.1"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.119.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.20.2",
@@ -32,6 +37,7 @@
     "autoprefixer": "^10.5.6",
     "postcss": "^8.5.28",
     "prisma": "^6.19.3",
+    "supabase": "^3.0.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2"

@@ -16,6 +16,9 @@ export type Configuracion = {
   diasAlertaVencimiento: number;
   bloqueoActivado: boolean;
   huellaActivada: boolean;
+  // Heredadas de la activación con clave (ya no se leen ni se escriben): la
+  // licencia ahora es un certificado del servidor guardado en Preferences,
+  // ver lib/licencia.ts. Quedan en la tabla para no tocar bases existentes.
   licenciaActivada: boolean;
   licenciaCodigoDispositivo: string | null;
   tipoNegocio: TipoNegocio | null;
