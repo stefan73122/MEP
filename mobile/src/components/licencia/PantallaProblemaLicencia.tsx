@@ -15,6 +15,9 @@ type Props = {
   codigoDispositivo: string;
   onReintentar: () => Promise<void>;
   onCerrarSesion: () => Promise<void>;
+  // Libera el lugar de otro teléfono y vuelve a intentar con este. Devuelve
+  // un mensaje de error, o null si salió bien.
+  onLiberarOtro: () => Promise<string | null>;
 };
 
 function textos(problema: ProblemaLicencia): { titulo: string; detalle: string } {
@@ -54,7 +57,7 @@ function textos(problema: ProblemaLicencia): { titulo: string; detalle: string }
           const max = problema.maxDispositivos ?? 1;
           return {
             titulo: "Tu licencia ya está en uso en otro teléfono",
-            detalle: `Tu licencia permite ${max} ${max === 1 ? "teléfono" : "teléfonos"}. Cierra sesión en el otro (Ajustes > Licencia) o pide que lo liberen.`,
+            detalle: `Tu licencia permite ${max} ${max === 1 ? "teléfono" : "teléfonos"}. Para usarla en este, cierra sesión en ${max === 1 ? "el otro" : "otro"} con el botón de abajo.`,
           };
         }
         case "dispositivo_bloqueado":
@@ -71,15 +74,34 @@ function textos(problema: ProblemaLicencia): { titulo: string; detalle: string }
   }
 }
 
-export function PantallaProblemaLicencia({ problema, codigoDispositivo, onReintentar, onCerrarSesion }: Props) {
-  const [ocupado, setOcupado] = useState<"reintentando" | "cerrando" | null>(null);
+type Accion = "reintentando" | "cerrando" | "liberando";
+
+export function PantallaProblemaLicencia({ problema, codigoDispositivo, onReintentar, onCerrarSesion, onLiberarOtro }: Props) {
+  const [ocupado, setOcupado] = useState<Accion | null>(null);
   const [copiado, setCopiado] = useState(false);
+  const [confirmandoLiberar, setConfirmandoLiberar] = useState(false);
+  const [errorLiberar, setErrorLiberar] = useState<string | null>(null);
   const { titulo, detalle } = textos(problema);
   // Cambiar de cuenta solo tiene sentido si el problema es de ESTA cuenta;
   // sin conexión o con el reloj mal no se arregla así.
   const permiteCambiarCuenta = problema.tipo === "denegada" || problema.tipo === "error";
+  const licenciaLlena = problema.tipo === "denegada" && problema.motivo === "limite_dispositivos";
+  const unSoloTelefono = problema.tipo === "denegada" && (problema.maxDispositivos ?? 1) === 1;
 
-  async function ejecutar(accion: "reintentando" | "cerrando", tarea: () => Promise<void>) {
+  async function liberarOtro() {
+    setErrorLiberar(null);
+    await ejecutar("liberando", async () => {
+      try {
+        const error = await onLiberarOtro();
+        if (error) setErrorLiberar(error);
+        else setConfirmandoLiberar(false);
+      } catch {
+        setErrorLiberar("No se pudo liberar el otro teléfono. Vuelve a intentarlo.");
+      }
+    });
+  }
+
+  async function ejecutar(accion: Accion, tarea: () => Promise<void>) {
     if (ocupado) return;
     setOcupado(accion);
     try {
@@ -137,12 +159,60 @@ export function PantallaProblemaLicencia({ problema, codigoDispositivo, onReinte
         </div>
       )}
 
+      {licenciaLlena && confirmandoLiberar && (
+        <div className="w-full max-w-sm space-y-3 rounded-xl bg-white p-4">
+          <p className="text-sm text-slate-700">
+            {unSoloTelefono
+              ? "¿Cerrar sesión en el otro teléfono y usar la licencia en este?"
+              : "¿Cerrar sesión en el teléfono que hace más tiempo no se usa y usar la licencia en este?"}{" "}
+            Ese teléfono dejará de funcionar la próxima vez que se conecte a internet. Sus datos (ventas, productos,
+            clientes) se quedan en ese teléfono: no pasan a este.
+          </p>
+          {errorLiberar && <p className="text-sm text-red-600">{errorLiberar}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmandoLiberar(false);
+                setErrorLiberar(null);
+              }}
+              disabled={!!ocupado}
+              className="flex-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={liberarOtro}
+              disabled={!!ocupado}
+              className="flex-1 rounded-lg bg-primary-600 px-3 py-2.5 text-sm font-medium text-white transition hover:brightness-110 disabled:opacity-60"
+            >
+              {ocupado === "liberando" ? "Liberando..." : "Sí, usar este"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-sm space-y-2">
+        {licenciaLlena && !confirmandoLiberar && (
+          <button
+            type="button"
+            onClick={() => setConfirmandoLiberar(true)}
+            disabled={!!ocupado}
+            className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:brightness-110 disabled:opacity-60"
+          >
+            {unSoloTelefono ? "Cerrar sesión en el otro teléfono" : "Cerrar sesión en otro teléfono"}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => ejecutar("reintentando", onReintentar)}
           disabled={!!ocupado}
-          className="w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:brightness-110 disabled:opacity-60"
+          className={
+            licenciaLlena
+              ? "w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
+              : "w-full rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition hover:brightness-110 disabled:opacity-60"
+          }
         >
           {ocupado === "reintentando" ? "Verificando..." : "Reintentar"}
         </button>

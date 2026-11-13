@@ -276,6 +276,45 @@ export async function cerrarSesion(codigoDispositivo: string): Promise<Resultado
   return resultado;
 }
 
+// - "liberado": se liberó un lugar; ya se puede volver a pedir la licencia.
+// - "nada_que_liberar": no hay otro teléfono que se pueda liberar (los que
+//   ocupan la licencia están bloqueados por el administrador).
+// - "sin_conexion" / "error": no se pudo hablar con el servidor.
+export type ResultadoLiberarOtro = "liberado" | "nada_que_liberar" | "sin_conexion" | "error";
+
+// Con la licencia llena, libera desde ESTE teléfono el lugar de otro, para
+// poder entrar acá sin pedírselo al administrador (el otro teléfono queda
+// afuera la próxima vez que se conecte). Se libera uno solo: el que hace más
+// tiempo no se conecta. Usa liberar_dispositivo(), que solo deja borrar
+// teléfonos de la propia licencia y nunca uno bloqueado.
+export async function liberarOtroDispositivo(codigoDispositivo: string): Promise<ResultadoLiberarOtro> {
+  const controlador = new AbortController();
+  const temporizador = setTimeout(() => controlador.abort(), TIEMPO_MAXIMO_RED_MS);
+  try {
+    const supabase = obtenerSupabase();
+    const { data: otros, error } = await supabase
+      .from("dispositivos")
+      .select("codigo")
+      .eq("bloqueado", false)
+      .neq("codigo", codigoDispositivo)
+      .order("ultimo_contacto_el", { ascending: true })
+      .limit(1)
+      .abortSignal(controlador.signal);
+    if (error) return "error";
+    if (!otros?.length) return "nada_que_liberar";
+
+    const { data: liberado, error: errorLiberar } = await supabase
+      .rpc("liberar_dispositivo", { p_codigo: otros[0].codigo })
+      .abortSignal(controlador.signal);
+    if (errorLiberar) return "error";
+    return liberado === true ? "liberado" : "nada_que_liberar";
+  } catch {
+    return "sin_conexion";
+  } finally {
+    clearTimeout(temporizador);
+  }
+}
+
 // Comprueba que el APK esté firmado con la firma esperada (embebida en el
 // plugin nativo). Si alguien lo modificó y lo volvió a firmar con otra
 // clave, esto da falso — ver PantallaAppInvalida.

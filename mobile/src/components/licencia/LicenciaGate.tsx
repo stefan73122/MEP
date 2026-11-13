@@ -7,6 +7,7 @@ import type { DatosCertificado } from "@/lib/certificadoLicencia";
 import {
   cerrarSesion as cerrarSesionLicencia,
   evaluarLicenciaLocal,
+  liberarOtroDispositivo,
   obtenerCodigoDispositivo,
   olvidarSesion,
   renovarLicencia,
@@ -199,6 +200,22 @@ export function LicenciaGate({ children }: { children: React.ReactNode }) {
     setEstado({ tipo: "ingreso", aviso: avisoAlCerrarSesion(resultado) });
   }, [codigoDispositivo]);
 
+  // Licencia llena: libera el otro teléfono y vuelve a pedir la licencia para
+  // este. Devuelve un mensaje solo si algo salió mal.
+  const liberarOtroYEntrar = useCallback(async (): Promise<string | null> => {
+    const resultado = await liberarOtroDispositivo(codigoDispositivo);
+    switch (resultado) {
+      case "liberado":
+        await validarEnLinea(codigoDispositivo);
+        return null;
+      case "nada_que_liberar":
+        return "No hay otro teléfono que se pueda liberar. Comunícate con quien te vendió la app.";
+      case "sin_conexion":
+      case "error":
+        return "No se pudo liberar el otro teléfono. Revisa tu conexión y vuelve a intentarlo.";
+    }
+  }, [codigoDispositivo, validarEnLinea]);
+
   const contexto = useMemo<ContextoLicencia | null>(
     () => (estado.tipo === "activada" ? { codigoDispositivo, datos: estado.datos, cerrarSesion } : null),
     [estado, codigoDispositivo, cerrarSesion],
@@ -259,6 +276,7 @@ export function LicenciaGate({ children }: { children: React.ReactNode }) {
         codigoDispositivo={codigoDispositivo}
         onReintentar={() => comprobarLicencia().catch(mostrarError)}
         onCerrarSesion={cerrarSesion}
+        onLiberarOtro={liberarOtroYEntrar}
       />
     );
   }
